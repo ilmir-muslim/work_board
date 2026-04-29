@@ -1,0 +1,64 @@
+<!-- templates/developer_base.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}developer-layout{% endblock %}
+
+{% block content_wrapper %}
+<div class="app-header">
+    <div class="container">
+        {% if user.is_authenticated %}
+            <div class="rate-display">
+                <span>💰 Ставка: {{ user.default_hourly_rate }} ₽/час</span>
+                <button class="btn-rate-edit" onclick="openRateModal()">✏️</button>
+            </div>
+        {% endif %}
+        <div class="title-section">
+            <h1>⏱️ Учёт времени</h1>
+            <p>Эффективно отслеживайте время ваших проектов</p>
+        </div>
+        <nav class="nav">
+            {% if user.is_authenticated %}
+                <a href="{% url 'developers:daily_tasks' %}" class="nav-link">📅 Ежедневные задачи</a>
+                <a href="{% url 'developers:project_list' %}" class="nav-link">📁 Проекты</a>
+                {% if user.is_staff %}
+                    <a href="http://localhost:5173" target="_blank" class="nav-link">👑 Админка</a>
+                {% endif %}
+                <form method="post" action="{% url 'users:logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-logout">Выйти</button>
+                </form>
+            {% else %}
+                <a href="{% url 'users:login' %}" class="nav-link">Войти</a>
+                <a href="{% url 'users:register' %}" class="nav-link">Регистрация</a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+
+<!-- Модальное окно ставки -->
+<div id="rateModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3>Изменить ставку</h3>
+        <div class="form-group">
+            <label>Ставка (₽/час):</label>
+            <input type="number" id="newRate" min="0" step="0.01" class="form-control">
+        </div>
+        <div class="modal-actions">
+            <button onclick="updateRate()" class="btn btn-primary">Сохранить</button>
+            <button onclick="closeRateModal()" class="btn btn-secondary">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- Основной контент (будет переопределён) -->
+{% block content %}{% endblock %}
+
+<footer class="app-footer">
+    <div class="container">
+        <p>&copy; 2025 Учёт времени</p>
+    </div>
+</footer>
+
+<script src="{% static 'js/developer.js' %}"></script>
+{% endblock %}

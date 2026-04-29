@@ -1,0 +1,20 @@
+<div class="daily-stats card">
+    <h3>📊 Статистика работы</h3>
+    <div class="stat-section">
+        <h4>Сегодня</h4>
+        <div class="stat-big">
+            <span class="stat-value">{{ current_daily_seconds|floatformat:0 }} сек</span>
+        </div>
+    </div>
+    <div class="stat-section">
+        <h4>Последние 7 дней</h4>
+        <div class="week-summary">
+            <span class="stat-value">{{ week_stats|sum:'total_seconds'|floatformat:0 }} сек</span>
+        </div>
+        <div class="mini-chart">
+            {% for day in week_stats %}
+                <div class="chart-bar" style="height: {% widthratio day.total_seconds week_stats|max:'total_seconds' 50 %}px;" title="{{ day.date }}: {{ day.total_seconds }} сек"></div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
