@@ -20,10 +20,10 @@
     margin-top: 1.5rem;
   }
   .square-card {
-    background: white;
+    background: linear-gradient(145deg, #fcfaff, #f3f0ff);
     border-radius: 1.4rem;
-    border: 1px solid #e9eef3;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2daf5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     aspect-ratio: 1 / 1;
     display: flex;
     flex-direction: column;
@@ -37,14 +37,15 @@
     position: relative;
   }
   .square-card:hover {
-    border-color: #6366f1;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+    background: linear-gradient(145deg, #f5f1ff, #ebe4ff);
+    border-color: #b8a9e8;
+    box-shadow: 0 8px 20px rgba(108, 92, 211, 0.1);
     transform: translateY(-2px);
   }
   .square-card h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.3rem;
-    color: #0f172a;
+    color: #2d2b55;
     word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -52,12 +53,12 @@
     overflow: hidden;
   }
   .square-card .time-display {
-    background: #f1f5f9;
+    background: #ece6f7;
     padding: 0.5rem 1rem;
     border-radius: 2rem;
     font-family: monospace;
     font-weight: 600;
-    color: #0f172a;
+    color: #2d2b55;
     margin-top: 0.5rem;
     font-size: 1.1rem;
   }
@@ -73,7 +74,7 @@
   {% for project in projects %}
     <div class="square-card" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
       <h3>{{ project.name }}</h3>
-      <div class="time-display">{{ project.total_time|floatformat:0 }} сек</div>
+      <div class="time-display">{{ project.formatted_total_time }}</div>
       <div class="project-date">{{ project.created_at|date:"d.m.Y" }}</div>
     </div>
   {% empty %}

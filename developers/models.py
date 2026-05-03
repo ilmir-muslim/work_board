@@ -34,6 +34,14 @@ class Project(models.Model):
         """Заработанная сумма = total_time * hourly_rate / 3600"""
         return self.total_time * self.hourly_rate / 3600
 
+    @property
+    def formatted_total_time(self):
+        """Возвращает общее время в формате ЧЧ:ММ:СС"""
+        total_seconds = int(self.total_time)  # total_time уже float
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 
 class Task(models.Model):
     title = models.CharField(max_length=255, verbose_name="Название")

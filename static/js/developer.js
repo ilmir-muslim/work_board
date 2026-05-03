@@ -193,6 +193,14 @@ function formatTime(seconds) {
     return `${hours}ч ${minutes}м ${secs}с`;
 }
 
+// Формат ЧЧ:ММ:СС (в отличие от formatTime, которая даёт "Xч Yм Zс")
+function formatTimeColon(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 /**
  * Возвращает HTML-код кнопки старта/паузы в зависимости от состояния.
  */
@@ -666,10 +674,10 @@ function renderWeekBars(data) {
 function applyDailyStats(data) {
     dailySeconds = data.current_daily_seconds;
     isDailyTimerRunning = data.is_daily_timer_running;
-    document.getElementById('todayTime').textContent = dailySeconds + ' сек';
+    document.getElementById('todayTime').textContent = formatTimeColon(dailySeconds);
     renderWeekBars(data);
     document.getElementById('weekTotal').textContent =
-        `Всего за неделю: ${data.week_total} сек`;
+        `Всего за неделю: ${formatTimeColon(data.week_total)}`;
 
     // Управление локальным секундомером
     if (isDailyTimerRunning && !dailyTimerInterval) {
@@ -684,7 +692,7 @@ function startLocalDailyTicker() {
     if (dailyTimerInterval) return;
     dailyTimerInterval = setInterval(() => {
         dailySeconds++;
-        document.getElementById('todayTime').textContent = dailySeconds + ' сек';
+        document.getElementById('todayTime').textContent = formatTimeColon(dailySeconds);
     }, 1000);
 }
 

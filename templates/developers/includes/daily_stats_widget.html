@@ -1,7 +1,9 @@
 <div class="card daily-stats-widget" id="dailyStatsWidget">
   <h3>📊 Сегодня</h3>
-  <div class="today-time" id="todayTime">-- сек</div>
+  <div class="today-time" id="todayTime">{{ current_daily_formatted }}</div>
   <h4 style="margin-top:1rem;">Неделя</h4>
   <div class="week-bars" id="weekBars"></div>
-  <div style="margin-top:0.5rem; font-weight:600;" id="weekTotal">Всего за неделю: -- сек</div>
+  <div style="margin-top:0.5rem; font-weight:600;" id="weekTotal">
+    Всего за неделю: {{ week_total_formatted }}
+  </div>
 </div>

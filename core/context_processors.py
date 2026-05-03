@@ -51,10 +51,18 @@ def daily_stats(request):
     max_week_seconds = max((d["total_seconds"] for d in week_data), default=0)
     week_total = sum(d["total_seconds"] for d in week_data)
 
+    # Форматирование времени в ЧЧ:ММ:СС
+    def fmt(sec):
+        h, rem = divmod(int(sec), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h:02d}:{m:02d}:{s:02d}"
+
     return {
         "current_daily_seconds": current_seconds,
+        "current_daily_formatted": fmt(current_seconds),
         "is_daily_timer_running": is_timer_running,
         "week_stats": week_data,
         "week_total": week_total,
+        "week_total_formatted": fmt(week_total),
         "max_week_seconds": max_week_seconds,
     }
