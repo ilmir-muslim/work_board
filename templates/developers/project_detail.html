@@ -8,6 +8,7 @@
     <div style="display: flex; gap: 0.5rem;">
       <button onclick="editProjectName()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">✏️ Название</button>
       <button onclick="editProjectRate()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">💰 Ставка</button>
+        <button onclick="deleteProject()" class="btn btn-danger">🗑️ Удалить проект</button>
     </div>
   </div>
 
@@ -54,16 +55,8 @@
   </div>
 </div>
 
-<!-- Кнопки действий -->
-<div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-  <button onclick="exportToTxt()" class="btn btn-primary">📄 Экспорт TXT</button>
-  <button onclick="copyToClipboard()" class="btn btn-primary">📋 Копировать отчёт</button>
-  <button onclick="generateDailyReport()" class="btn btn-warning">📅 Дейлик</button>
-  {% if has_active_timers %}
-  <button onclick="stopAllTimers()" class="btn btn-warning">⏹️ Остановить все</button>
-  {% endif %}
-  <button onclick="deleteProject()" class="btn btn-danger">🗑️ Удалить проект</button>
-</div>
+
+
 
 <!-- Вкладки -->
 <div class="filters" style="margin-bottom:1rem;">

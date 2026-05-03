@@ -12,18 +12,74 @@
   </div>
 </div>
 
+<style>
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+  }
+  .square-card {
+    background: white;
+    border-radius: 1.4rem;
+    border: 1px solid #e9eef3;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1.2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    position: relative;
+  }
+  .square-card:hover {
+    border-color: #6366f1;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+  }
+  .square-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    color: #0f172a;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .square-card .time-display {
+    background: #f1f5f9;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-family: monospace;
+    font-weight: 600;
+    color: #0f172a;
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+  }
+  .square-card .project-date {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 0.3rem;
+  }
+</style>
+
 <!-- Список проектов -->
-<div id="projectsList">
+<div class="projects-grid">
   {% for project in projects %}
-    <div class="card project-card" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
-      <div>
-        <h3 style="margin:0;">{{ project.name }}</h3>
-        <p style="margin:0; color:#64748b;">{{ project.created_at|date:"d.m.Y" }}</p>
-      </div>
+    <div class="square-card" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
+      <h3>{{ project.name }}</h3>
       <div class="time-display">{{ project.total_time|floatformat:0 }} сек</div>
+      <div class="project-date">{{ project.created_at|date:"d.m.Y" }}</div>
     </div>
   {% empty %}
-    <div class="card" style="text-align:center; color:#94a3b8;">Нет проектов</div>
+    <div class="card" style="text-align:center; color:#94a3b8; grid-column: 1 / -1;">
+      Нет проектов
+    </div>
   {% endfor %}
 </div>
 {% endblock %}

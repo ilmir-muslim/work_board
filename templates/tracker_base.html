@@ -86,20 +86,34 @@
       border-color: #6366f1;
       box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
     }
+
+    /* ---------- ОБНОВЛЁННЫЕ СТИЛИ ЗАДАЧ: жирные цветные границы ---------- */
     .task-item {
       display: flex;
       flex-direction: column;
       background: #ffffff;
       padding: 1rem 1.2rem;
       border-radius: 1.2rem;
-      border: 1px solid #e9eef3;
+      border: 2px solid #c7d2fe;           /* спокойный сиреневый оттенок */
       gap: 0.8rem;
       transition: all 0.2s;
       animation: fadeIn 0.25s ease;
       margin-bottom: 0.8rem;
     }
-    .task-item:hover { border-color: #cbd5e1; }
+    .task-item:hover {
+      border-color: #6366f1;               /* более яркий при наведении */
+      box-shadow: 0 4px 12px rgba(99,102,241,0.1);
+    }
+    .task-item.completed {
+      opacity: 0.8;
+      border-color: #d1d5db;
+    }
     .task-item.completed .task-text { text-decoration: line-through; color: #94a3b8; }
+    /* подсветка активной задачи с таймером */
+    .task-item.active {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+    }
     @keyframes fadeIn {
       0% { opacity: 0; transform: translateY(5px); }
       100% { opacity: 1; transform: translateY(0); }
@@ -137,7 +151,7 @@
     .filter-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
     .task-checkbox { width: 1.3rem; height: 1.3rem; accent-color: #6366f1; cursor: pointer; }
 
-    /* --- Новые стили для карточки проекта --- */
+    /* --- Новые стили для карточки проекта (в деталях) --- */
     .project-info-card {
       background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
       color: white;
