@@ -4,7 +4,7 @@
 {% block content %}
 <div class="project-info-card">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-    <h2>📋 {{ project.name }}</h2>
+    <h2 id="projectName">📋 {{ project.name }}</h2>
     <div style="display: flex; gap: 0.5rem;">
       <button onclick="editProjectName()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">✏️ Название</button>
       <button onclick="editProjectRate()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">💰 Ставка</button>

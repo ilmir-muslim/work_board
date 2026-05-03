@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import render, redirect
@@ -30,5 +31,5 @@ def update_rate(request):
         if rate:
             request.user.default_hourly_rate = float(rate)
             request.user.save()
-        return redirect("users:profile")  # ← исправлено
-    return render(request, "users/update_rate.html")
+        return JsonResponse({"success": True})
+    return JsonResponse({"error": "Метод не поддерживается"}, status=405)

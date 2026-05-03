@@ -15,13 +15,11 @@ document.addEventListener('DOMContentLoaded', function () {
  */
 function initializeTimerDisplays() {
     document.querySelectorAll('.current-time').forEach(el => {
-        // Берём значение из data-initial-seconds, если есть
         const initial = el.getAttribute('data-initial-seconds');
         const seconds = initial ? parseFloat(initial) : 0;
         el.textContent = formatTime(seconds);
         el.setAttribute('data-seconds', seconds);
     });
-    // Первичный расчёт общего времени после инициализации
     updateProjectTotals();
 }
 
@@ -76,8 +74,10 @@ function deleteProject() {
 }
 
 function editProjectName() {
-    const newName = prompt('Новое название проекта:',
-        document.querySelector('h1').textContent.trim());
+    const titleElement = document.getElementById('projectName');
+    if (!titleElement) return;
+    const currentName = titleElement.textContent.replace(/^📋\s*/, '').trim();
+    const newName = prompt('Новое название проекта:', currentName);
     if (newName) {
         fetch(`/developers/api/projects/${currentProjectId}/update/`, {
             method: 'POST',
@@ -262,8 +262,6 @@ function updateLiveTimers() {
                     card.classList.remove('active');
                 }
                 updateTimerButton(taskId, data.is_timer_running);
-
-                // После обновления каждой задачи пересчитываем итоги
                 updateProjectTotals();
             });
     });
