@@ -1,28 +1,15 @@
-<!-- templates/developer_base_with_columns.html -->
 {% extends 'developer_base.html' %}
 
-{% block content %}
-{% if user.is_authenticated %}
-<div class="main-layout">
-    <main class="app-main">
-        <div class="container content-area">
-            <aside class="left-column">
-                {% include 'developers/includes/earnings_summary.html' %}
-            </aside>
-            <div class="content-column main-column">
-                {% block main_content %}{% endblock %}
-            </div>
-            <aside class="stats-column">
-                {% include 'developers/includes/daily_stats.html' %}
-            </aside>
-        </div>
-    </main>
-</div>
-{% else %}
-<main class="app-main">
-    <div class="container">
-        {% block main_content %}{% endblock %}
+{% block main_content %}
+<div class="content-area">
+    <aside class="left-column">
+        {% include 'developers/includes/earnings_summary.html' %}
+    </aside>
+    <div class="content-column main-column">
+        {% block column_content %}{% endblock %}
     </div>
-</main>
-{% endif %}
+    <aside class="stats-column">
+        {% include 'developers/includes/daily_stats.html' %}
+    </aside>
+</div>
 {% endblock %}

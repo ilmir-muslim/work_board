@@ -30,5 +30,5 @@ def update_rate(request):
         if rate:
             request.user.default_hourly_rate = float(rate)
             request.user.save()
-        return redirect("profile")
+        return redirect("users:profile")  # ← исправлено
     return render(request, "users/update_rate.html")

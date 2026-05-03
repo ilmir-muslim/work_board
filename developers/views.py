@@ -445,3 +445,70 @@ def earnings_summary(request):
             "average_monthly": average_monthly,
         },
     )
+
+
+@login_required
+def project_detail(request, pk):
+    project = get_object_or_404(Project, pk=pk, owner=request.user)
+    tasks = Task.objects.filter(project=project, owner=request.user).order_by(
+        "-created_at"
+    )
+
+    completed_tasks_count = tasks.filter(is_completed=True).count()
+    has_active_timers = tasks.filter(is_timer_running=True).exists()
+    other_timer_running = (
+        Task.objects.filter(owner=request.user, is_timer_running=True)
+        .exclude(project=project)
+        .exists()
+    )
+
+    # Подсчёт подзадач
+    total_subtasks = 0
+    completed_subtasks = 0
+    for task in tasks:
+        subs = task.sub_tasks.all()
+        total_subtasks += subs.count()
+        completed_subtasks += subs.filter(is_completed=True).count()
+
+    total_items = (
+        completed_tasks_count + total_subtasks
+    )  # общее кол-во элементов для прогресса
+    completed_items = completed_tasks_count + completed_subtasks
+    overall_completion = (
+        int((completed_items / total_items * 100)) if total_items > 0 else 0
+    )
+
+    active_tab = request.GET.get("tab", "timer")
+
+    context = {
+        "project": project,
+        "tasks": tasks,
+        "completed_tasks_count": completed_tasks_count,
+        "total_subtasks": total_subtasks,
+        "completed_subtasks": completed_subtasks,
+        "overall_completion": overall_completion,
+        "timer_tasks": tasks,
+        "project_tasks": tasks,
+        "active_tab": active_tab,
+        "has_active_timers": has_active_timers,
+        "other_timer_running": other_timer_running,
+    }
+    return render(request, "developers/project_detail.html", context)
+
+
+@login_required
+def daily_tasks(request):
+    """Страница «Ежедневные задачи» (задачи без проекта)."""
+    tasks = Task.objects.filter(owner=request.user, project__isnull=True)
+    completed_count = tasks.filter(is_completed=True).count()
+    total_count = tasks.count()
+    completion_rate = (completed_count / total_count * 100) if total_count > 0 else 0
+
+    context = {
+        "daily_tasks": tasks,
+        "completed_tasks_count": completed_count,
+        "completion_rate": round(completion_rate),
+        "total_subtasks": 0,
+        "completed_subtasks": 0,
+    }
+    return render(request, "developers/daily_tasks.html", context)

@@ -1,64 +1,44 @@
-{% extends 'developer_base.html' %}
-{% load static %}
+{% extends 'tracker_base.html' %}
 
 {% block content %}
-<div class="project-list">
-    <div class="header-card">
-        <div class="header-content">
-            <h2>Мои проекты</h2>
-            <p>Создавайте и управляйте своими проектами</p>
-        </div>
-    </div>
+<h1>📁 Мои проекты</h1>
 
-    <div class="card">
-        <h3>Создать новый проект</h3>
-        <div class="project-form">
-            <input type="text" id="newProjectName" placeholder="Введите название проекта" class="form-control project-input">
-            <button onclick="createProject()" class="btn btn-primary add-project-btn">+ Добавить проект</button>
-        </div>
-    </div>
-
-    {% if projects %}
-        <div class="projects-grid">
-            {% for project in projects %}
-                <div class="project-card card" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
-                    <div class="project-header">
-                        <h3>{{ project.name }}</h3>
-                        <span class="project-time">{{ project.total_time|floatformat:0 }} сек</span>
-                    </div>
-                    <p class="project-created">Создан: {{ project.created_at|date:"d.m.Y" }}</p>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card empty-state">
-            <div class="empty-icon">📁</div>
-            <h3>Пока нет проектов</h3>
-            <p>Создайте первый проект чтобы начать</p>
-        </div>
-    {% endif %}
+<!-- Создание проекта -->
+<div class="card">
+  <h3>Создать новый проект</h3>
+  <div style="display:flex; gap:0.5rem;">
+    <input type="text" id="newProjectName" placeholder="Название проекта" class="form-control">
+    <button onclick="createProject()" class="btn btn-primary">+ Добавить</button>
+  </div>
 </div>
 
+<!-- Список проектов -->
+<div id="projectsList">
+  {% for project in projects %}
+    <div class="card project-card" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
+      <div>
+        <h3 style="margin:0;">{{ project.name }}</h3>
+        <p style="margin:0; color:#64748b;">{{ project.created_at|date:"d.m.Y" }}</p>
+      </div>
+      <div class="time-display">{{ project.total_time|floatformat:0 }} сек</div>
+    </div>
+  {% empty %}
+    <div class="card" style="text-align:center; color:#94a3b8;">Нет проектов</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function createProject() {
-    const name = document.getElementById('newProjectName').value.trim();
-    if (!name) return;
-    fetch('/developers/api/projects/create/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({ name: name })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.id) {
-            location.reload(); // или добавить карточку динамически
-        } else {
-            alert('Ошибка создания проекта');
-        }
-    });
+async function createProject() {
+  const name = document.getElementById('newProjectName').value.trim();
+  if (!name) return;
+  const res = await fetch('/developers/api/projects/create/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify({ name: name })
+  });
+  if (res.ok) location.reload();
 }
 </script>
 {% endblock %}

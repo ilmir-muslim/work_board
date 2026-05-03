@@ -17,7 +17,7 @@
         .errorlist { color: red; margin: 0; padding: 0; list-style: none; }
     </style>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     {% block content %}{% endblock %}
 </body>
 </html>

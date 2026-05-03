@@ -1,20 +1,64 @@
-<div class="daily-stats card">
-    <h3>📊 Статистика работы</h3>
-    <div class="stat-section">
-        <h4>Сегодня</h4>
-        <div class="stat-big">
-            <span class="stat-value">{{ current_daily_seconds|floatformat:0 }} сек</span>
-        </div>
-    </div>
-    <div class="stat-section">
-        <h4>Последние 7 дней</h4>
-        <div class="week-summary">
-            <span class="stat-value">{{ week_stats|sum:'total_seconds'|floatformat:0 }} сек</span>
-        </div>
-        <div class="mini-chart">
-            {% for day in week_stats %}
-                <div class="chart-bar" style="height: {% widthratio day.total_seconds week_stats|max:'total_seconds' 50 %}px;" title="{{ day.date }}: {{ day.total_seconds }} сек"></div>
-            {% endfor %}
-        </div>
-    </div>
+{% extends 'tracker_base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>📅 Ежедневные задачи</h1>
+
+<!-- Отчёты -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <h3>📊 Действия</h3>
+  <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <button onclick="generateCurrentWeekReport()" class="btn">📅 Тек. неделя</button>
+    <button onclick="generatePreviousWeekReport()" class="btn">📅 Прошлая неделя</button>
+    <button onclick="transferUncompletedTasksFromPreviousWeek()" class="btn">🔄 Перенести незавершённые</button>
+    <button onclick="generateDailyReport()" class="btn">📅 Дейлик</button>
+  </div>
 </div>
+
+<!-- Добавление задачи -->
+<div class="card">
+  <h3>Добавить новую задачу</h3>
+  <textarea id="newTaskTitle" placeholder="Опишите задачу подробно..." class="form-control" rows="2"></textarea>
+  <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+    <select id="newTaskPriority" class="form-control" style="width:auto;">
+      <option value="1">🔴 Высокий</option>
+      <option value="2" selected>🟡 Средний</option>
+      <option value="3">🟢 Низкий</option>
+    </select>
+    <input type="date" id="newTaskDueDate" class="form-control" style="width:auto;">
+    <button onclick="addDailyTask()" class="btn btn-primary">Добавить</button>
+  </div>
+</div>
+
+<!-- Фильтры -->
+<div class="filters">
+  <button onclick="filterTasks('all')" class="filter-btn active" id="filter-all">Все</button>
+  <button onclick="filterTasks('active')" class="filter-btn" id="filter-active">Активные</button>
+  <button onclick="filterTasks('completed')" class="filter-btn" id="filter-completed">Завершённые</button>
+</div>
+
+<!-- Список задач -->
+<div id="tasks-container">
+  {% for task in daily_tasks %}
+  <div class="task-item {% if task.is_completed %}completed{% endif %}" data-task-id="{{ task.id }}" data-completed="{{ task.is_completed }}" style="flex-wrap: wrap; align-items: flex-start;">
+    <div style="display: flex; align-items: center; gap: 0.8rem; width: 100%;">
+      <input type="checkbox" {% if task.is_completed %}checked{% endif %} onchange="toggleTaskCompletion({{ task.id }}, this.checked)" class="task-checkbox">
+      <span class="task-text" style="flex:1;">{{ task.title }}</span>
+      <span style="color:#64748b;">{{ task.get_priority_display }}</span>
+      {% if task.due_date %}<span style="color:#64748b;">📅 {{ task.due_date|date:"d.m.Y" }}</span>{% endif %}
+      <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">✕</button>
+    </div>
+    <!-- Здесь можно добавить подзадачи и комментарии, если нужно -->
+  </div>
+  {% empty %}
+  <div class="card" style="text-align:center; color:#94a3b8;">Нет задач</div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Глобальная переменная токена уже определена в base
+  // Но функция addDailyTask уже в developer.js
+</script>
+{% endblock %}

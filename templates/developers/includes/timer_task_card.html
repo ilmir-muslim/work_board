@@ -1,0 +1,67 @@
+<div class="task-item timer-task-card" data-task-id="{{ task.id }}" 
+     style="flex-direction: column; align-items: stretch;">
+  
+  <!-- Верхняя строка: чекбокс, название, время, кнопки управления -->
+  <div style="display: flex; align-items: center; gap: 0.8rem;">
+    <input type="checkbox" 
+           {% if task.is_completed %}checked{% endif %}
+           onchange="toggleTaskCompletion({{ task.id }}, this.checked)" 
+           class="task-checkbox">
+    
+    <span class="task-text" style="flex:1; font-size: 1.1rem; 
+      {% if task.is_completed %}text-decoration: line-through; color: #94a3b8;{% endif %}">
+      {{ task.title }}
+    </span>
+    
+    <div class="time-display current-time" style="margin:0 0.5rem;">
+      {{ task.total_time_with_current|floatformat:0 }} сек
+    </div>
+
+    <!-- Кнопка таймера -->
+    <span class="timer-btn-container" data-task-id="{{ task.id }}">
+      {% if task.is_timer_running %}
+        <button onclick="pauseTimer({{ task.id }})" class="btn btn-warning timer-action">⏸ Пауза</button>
+      {% else %}
+        <button onclick="startTimer({{ task.id }})" class="btn btn-primary timer-action">▶ Старт</button>
+      {% endif %}
+    </span>
+    
+    <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">✕</button>
+  </div>
+
+  <!-- Блок комментариев (сворачиваемый) -->
+  <div style="margin-top: 0.5rem;">
+    <button class="btn btn-sm" onclick="toggleCommentsBlock(this, {{ task.id }})" 
+            style="font-size:0.85rem; padding:0.3rem 0.8rem;">
+      💬 Комментарии ({{ task.comments.count }})
+    </button>
+    
+    <div class="comments-block" data-task-id="{{ task.id }}" style="display:none; margin-top:0.5rem;">
+      <!-- Список комментариев -->
+      <div class="comments-list" data-task-id="{{ task.id }}">
+        {% for comment in task.comments.all %}
+        <div class="comment-item" data-comment-id="{{ comment.id }}" 
+             style="background:#f9fafb; padding:0.5rem; border-radius:0.5rem; margin-bottom:0.3rem;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <span style="flex:1;">{{ comment.content }}</span>
+            <button onclick="deleteTaskCommentDynamic({{ task.id }}, {{ comment.id }})" 
+                    class="btn btn-sm btn-danger" style="margin-left:0.5rem;">🗑️</button>
+          </div>
+          <div style="font-size:0.75rem; color:#64748b; margin-top:0.2rem;">
+            {{ comment.created_at|date:"d.m.Y H:i" }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Форма добавления -->
+      <div style="display:flex; gap:0.3rem; margin-top:0.3rem;">
+        <textarea class="form-control comment-input" 
+                  placeholder="Комментарий..." rows="1" 
+                  style="font-size:0.9rem; resize:vertical;"></textarea>
+        <button onclick="addTaskCommentDynamic({{ task.id }}, this.previousElementSibling)" 
+                class="btn btn-sm btn-primary">💬</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -24,7 +24,6 @@ def earnings_summary(request):
 def daily_stats(request):
     if not request.user.is_authenticated:
         return {}
-    # Текущая сессия
     today = timezone.now().date()
     try:
         session = DailyWorkSession.objects.get(user=request.user, date=today)
@@ -32,8 +31,7 @@ def daily_stats(request):
     except DailyWorkSession.DoesNotExist:
         current_seconds = 0
 
-    # Последние 7 дней
-    end_date = timezone.now().date()
+    end_date = today
     start_date = end_date - timedelta(days=6)
     week_sessions = DailyWorkSession.objects.filter(
         user=request.user, date__range=[start_date, end_date]
@@ -48,25 +46,12 @@ def daily_stats(request):
                 "total_seconds": sess.total_with_current if sess else 0,
             }
         )
-
-    # Последние 30 дней
-    start_date_30 = end_date - timedelta(days=29)
-    month_sessions = DailyWorkSession.objects.filter(
-        user=request.user, date__range=[start_date_30, end_date]
-    )
-    month_data = []
-    for i in range(30):
-        day = start_date_30 + timedelta(days=i)
-        sess = month_sessions.filter(date=day).first()
-        month_data.append(
-            {
-                "date": day.strftime("%Y-%m-%d"),
-                "total_seconds": sess.total_with_current if sess else 0,
-            }
-        )
+    max_week_seconds = max((d["total_seconds"] for d in week_data), default=0)
+    week_total = sum(d["total_seconds"] for d in week_data)
 
     return {
         "current_daily_seconds": current_seconds,
         "week_stats": week_data,
-        "month_stats": month_data,
+        "week_total": week_total,
+        "max_week_seconds": max_week_seconds,
     }

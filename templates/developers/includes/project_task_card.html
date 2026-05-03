@@ -1,0 +1,51 @@
+<div class="task-item {% if task.is_completed %}completed{% endif %}"
+     data-task-id="{{ task.id }}" data-completed="{{ task.is_completed }}"
+     style="flex-wrap: wrap; align-items: flex-start;">
+
+  <!-- Основная информация -->
+  <div style="display: flex; align-items: center; gap: 0.8rem; width: 100%;">
+    <input type="checkbox" {% if task.is_completed %}checked{% endif %}
+           onchange="toggleTaskCompletion({{ task.id }}, this.checked)" class="task-checkbox">
+    <span class="task-text" style="flex:1;">{{ task.title }}</span>
+    <span style="color:#64748b;">{{ task.get_priority_display }}</span>
+    {% if task.due_date %}<span style="color:#64748b;">📅 {{ task.due_date|date:"d.m.Y" }}</span>{% endif %}
+    <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">✕</button>
+  </div>
+
+  <!-- Подзадачи -->
+  {% with subtasks=task.sub_tasks.all %}
+  {% if subtasks %}
+  <div style="width:100%; padding-left: 2rem; margin-top: 0.5rem;">
+    {% for sub in subtasks %}
+    <div class="subtask-item" data-subtask-id="{{ sub.id }}" style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+      <input type="checkbox" {% if sub.is_completed %}checked{% endif %}
+             onchange="toggleSubTaskCompletion({{ task.id }}, {{ sub.id }}, this.checked)" class="subtask-checkbox">
+      <span class="{% if sub.is_completed %}completed-text{% endif %}" ondblclick="editSubTask({{ sub.id }}, this)">{{ sub.title }}</span>
+      <button onclick="deleteSubTask({{ task.id }}, {{ sub.id }})" class="btn btn-sm btn-danger">🗑️</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="add-subtask" style="width:100%; padding-left:2rem; margin-top:0.3rem; display:flex; gap:0.3rem;">
+    <input type="text" class="form-control subtask-input" placeholder="Добавить подзадачу...">
+    <button onclick="addSubTask({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">+</button>
+  </div>
+  {% endwith %}
+
+  <!-- Комментарии -->
+  <div class="comments-section" style="width:100%; padding-left:2rem;">
+    {% for comment in task.comments.all %}
+    <div class="comment-item" style="background:#f9fafb; padding:0.5rem; border-radius:0.5rem; margin:0.3rem 0;">
+      <div>{{ comment.content }}</div>
+      <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#64748b;">
+        <span>{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+        <button onclick="deleteTaskComment({{ task.id }}, {{ comment.id }})" class="btn btn-sm btn-danger">🗑️</button>
+      </div>
+    </div>
+    {% endfor %}
+    <div style="display:flex; gap:0.3rem; margin-top:0.3rem;">
+      <textarea class="form-control comment-input" placeholder="Добавить комментарий..." rows="2"></textarea>
+      <button onclick="addTaskComment({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">💬</button>
+    </div>
+  </div>
+</div>

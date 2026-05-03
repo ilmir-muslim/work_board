@@ -1,219 +1,145 @@
-{% extends 'developer_base_with_columns.html' %}
+{% extends 'tracker_base.html' %}
 {% load static %}
 
-{% block main_content %}
-<div class="daily-tasks">
-    <div class="header-card">
-        <div class="header-content">
-            <h2>📅 Ежедневные задачи</h2>
-            <p>Задачи вне проектов - рутина, привычки, ежедневные дела</p>
-        </div>
+{% block content %}
+<h1>📅 Ежедневные задачи</h1>
+
+<!-- Отчёты -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <h3>📊 Действия</h3>
+  <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <button onclick="generateCurrentWeekReport()" class="btn">📅 Тек. неделя</button>
+    <button onclick="generatePreviousWeekReport()" class="btn">📅 Прошлая неделя</button>
+    <button onclick="transferUncompletedTasksFromPreviousWeek()" class="btn">🔄 Перенести незавершённые</button>
+    <button onclick="generateDailyReport()" class="btn">📅 Дейлик</button>
+  </div>
+</div>
+
+<!-- Добавление задачи -->
+<div class="card">
+  <h3>Добавить новую задачу</h3>
+  <textarea id="newTaskTitle" placeholder="Опишите задачу подробно..." class="form-control" rows="2"></textarea>
+  <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+    <select id="newTaskPriority" class="form-control" style="width:auto;">
+      <option value="1">🔴 Высокий</option>
+      <option value="2" selected>🟡 Средний</option>
+      <option value="3">🟢 Низкий</option>
+    </select>
+    <input type="date" id="newTaskDueDate" class="form-control" style="width:auto;">
+    <button onclick="addDailyTask()" class="btn btn-primary">Добавить</button>
+  </div>
+</div>
+
+<!-- Фильтры -->
+<div class="filters">
+  <button onclick="filterTasks('all')" class="filter-btn active" id="filter-all">Все</button>
+  <button onclick="filterTasks('active')" class="filter-btn" id="filter-active">Активные</button>
+  <button onclick="filterTasks('completed')" class="filter-btn" id="filter-completed">Завершённые</button>
+</div>
+
+<!-- Список задач -->
+<div id="tasks-container">
+  {% for task in daily_tasks %}
+  <div class="task-item {% if task.is_completed %}completed{% endif %}" 
+       data-task-id="{{ task.id }}" 
+       data-completed="{{ task.is_completed }}" 
+       style="flex-wrap: wrap; align-items: flex-start;">
+    <div style="display: flex; align-items: center; gap: 0.8rem; width: 100%;">
+      <input type="checkbox" {% if task.is_completed %}checked{% endif %} 
+             onchange="toggleTaskCompletion({{ task.id }}, this.checked)" class="task-checkbox">
+      <span class="task-text" style="flex:1;" ondblclick="openEditTaskModal({{ task.id }})">{{ task.title }}</span>
+      <span style="color:#64748b;">{{ task.get_priority_display }}</span>
+      {% if task.due_date %}<span style="color:#64748b;">📅 {{ task.due_date|date:"d.m.Y" }}</span>{% endif %}
+      <button onclick="copySingleTaskToClipboard({{ task.id }})" class="btn btn-sm">📋</button>
+      <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">✕</button>
     </div>
 
-    <!-- Блок всех отчетов -->
-    <div class="all-report-actions card">
-        <h3>📊 Все отчеты и действия</h3>
-        <div class="report-sections">
-            <div class="report-section">
-                <h4>Недельные отчеты</h4>
-                <div class="report-buttons">
-                    <button onclick="generateCurrentWeekReport()" class="btn btn-weekly">📅 Отчет за текущую неделю</button>
-                    <button onclick="generatePreviousWeekReport()" class="btn btn-weekly">📅 Отчет за прошлую неделю</button>
-                    <button onclick="transferUncompletedTasksFromPreviousWeek()" class="btn btn-transfer">🔄 Перенести не завершенные задачи прошлой недели</button>
-                </div>
+    <!-- Подзадачи -->
+    {% with subtasks=task.sub_tasks.all %}
+    {% if subtasks %}
+    <div style="width:100%; padding-left: 2rem; margin-top: 0.5rem;">
+      {% for sub in subtasks %}
+      <div class="subtask-item" data-subtask-id="{{ sub.id }}">
+        <input type="checkbox" {% if sub.is_completed %}checked{% endif %} 
+               onchange="toggleSubTaskCompletion({{ task.id }}, {{ sub.id }}, this.checked)" class="subtask-checkbox">
+        <span class="{% if sub.is_completed %}completed-text{% endif %}" ondblclick="editSubTask({{ sub.id }}, this)">{{ sub.title }}</span>
+        <button onclick="deleteSubTask({{ task.id }}, {{ sub.id }})" class="btn btn-sm btn-danger">🗑️</button>
+
+        <!-- Комментарии подзадачи -->
+        <div class="subtask-comments">
+          {% for comment in sub.comments.all %}
+          <div class="subtask-comment">
+            <div class="comment-content">{{ comment.content }}</div>
+            <div class="comment-meta">
+              <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+              <button onclick="deleteSubTaskComment({{ sub.id }}, {{ comment.id }})" class="btn btn-sm btn-danger">🗑️</button>
             </div>
-            <div class="report-section">
-                <h4>Ежедневные отчеты</h4>
-                <div class="report-buttons">
-                    <button onclick="generateDailyReport()" class="btn btn-daily">📅 Сформировать дейлик</button>
-                </div>
-            </div>
+          </div>
+          {% endfor %}
+          <div class="add-subtask-comment">
+            <textarea class="form-control subtask-comment-input" placeholder="Комментарий..." rows="2"></textarea>
+            <button onclick="addSubTaskComment({{ sub.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">💬</button>
+          </div>
         </div>
+      </div>
+      {% endfor %}
     </div>
-
-    <!-- Форма добавления задачи -->
-    <div class="card task-input-card">
-        <h3>Добавить новую задачу</h3>
-        <div class="task-form">
-            <div class="form-group full-width-input">
-                <textarea id="newTaskTitle" placeholder="Опишите задачу подробно..." class="form-control task-input" rows="3"></textarea>
-            </div>
-            <div class="task-options">
-                <select id="newTaskPriority" class="form-control priority-select">
-                    <option value="1">🔴 Высокий приоритет</option>
-                    <option value="2" selected>🟡 Средний приоритет</option>
-                    <option value="3">🟢 Низкий приоритет</option>
-                </select>
-                <input id="newTaskDueDate" type="date" class="form-control date-input">
-            </div>
-            <button onclick="addDailyTask()" class="btn btn-primary add-task-btn">➕ Добавить задачу</button>
-        </div>
+    {% endif %}
+    <div class="add-subtask" style="width:100%; padding-left:2rem; margin-top:0.3rem;">
+      <input type="text" class="form-control subtask-input" placeholder="Добавить подзадачу...">
+      <button onclick="addSubTask({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">+</button>
     </div>
+    {% endwith %}
 
-    <!-- Фильтры задач -->
-    <div class="task-filters card">
-        <button onclick="filterTasks('all')" class="filter-btn active" id="filter-all">Все</button>
-        <button onclick="filterTasks('active')" class="filter-btn" id="filter-active">Активные</button>
-        <button onclick="filterTasks('completed')" class="filter-btn" id="filter-completed">Завершенные</button>
+    <!-- Комментарии к задаче -->
+    <div class="comments-section" style="width:100%; padding-left:2rem;">
+      {% for comment in task.comments.all %}
+      <div class="comment-item">
+        <div class="comment-content">{{ comment.content }}</div>
+        <div class="comment-meta">
+          <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+          <button onclick="deleteTaskComment({{ task.id }}, {{ comment.id }})" class="btn btn-sm btn-danger">🗑️</button>
+        </div>
+      </div>
+      {% endfor %}
+      <div class="add-comment" style="display:flex; gap:0.3rem;">
+        <textarea class="form-control comment-input" placeholder="Добавить комментарий..." rows="2"></textarea>
+        <button onclick="addTaskComment({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">💬</button>
+      </div>
     </div>
-
-    <!-- Статистика -->
-    <div class="tasks-stats card">
-        <div class="stat-item">
-            <span class="stat-number">{{ daily_tasks|length }}</span>
-            <span class="stat-label">Всего задач</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number">{{ completed_tasks_count }}</span>
-            <span class="stat-label">Выполнено</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number">{{ completion_rate }}%</span>
-            <span class="stat-label">Прогресс</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number">{{ total_subtasks }}</span>
-            <span class="stat-label">Всего подзадач</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number">{{ completed_subtasks }}</span>
-            <span class="stat-label">Выполнено подзадач</span>
-        </div>
-    </div>
-
-    <!-- Список задач -->
-    <div id="tasks-container">
-        {% for task in daily_tasks %}
-        <div class="task-item card {% if task.is_completed %}task-completed{% endif %} priority-{{ task.priority }}" data-task-id="{{ task.id }}" data-completed="{{ task.is_completed|lower }}">
-            <div class="task-header">
-                <div class="task-main-info">
-                    <input type="checkbox" {% if task.is_completed %}checked{% endif %} onchange="toggleTaskCompletion({{ task.id }}, this.checked)" class="task-checkbox">
-                    <h4 class="{% if task.is_completed %}completed-text{% endif %}">{{ task.title }}</h4>
-                </div>
-                <div class="task-meta">
-                    <span class="task-priority priority-{{ task.priority }}">
-                        {{ task.get_priority_display }}
-                    </span>
-                    {% if task.due_date %}
-                    <span class="task-due-date">📅 {{ task.due_date|date:"d.m.Y" }}</span>
-                    {% endif %}
-                    <div class="task-header-actions">
-                        <button onclick="copySingleTaskToClipboard({{ task.id }})" class="btn btn-sm btn-copy">📋 Копировать</button>
-                        <button onclick="openEditTaskModal({{ task.id }})" class="btn btn-sm btn-edit">✏️</button>
-                        <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">🗑️</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Прогресс подзадач -->
-            {% with subtasks=task.sub_tasks.all %}
-            {% if subtasks %}
-            <div class="subtasks-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ task.subtasks_completion_rate }}%;"></div>
-                </div>
-                <span class="progress-text">{{ task.completed_subtasks_count }}/{{ subtasks|length }} подзадач</span>
-            </div>
-            {% endif %}
-
-            <!-- Подзадачи -->
-            <div class="subtasks-section">
-                {% for sub in subtasks %}
-                <div class="subtask-item" data-subtask-id="{{ sub.id }}">
-                    <input type="checkbox" {% if sub.is_completed %}checked{% endif %} onchange="toggleSubTaskCompletion({{ task.id }}, {{ sub.id }}, this.checked)" class="subtask-checkbox">
-                    <span class="{% if sub.is_completed %}completed-text{% endif %}" ondblclick="editSubTask({{ sub.id }}, this)">{{ sub.title }}</span>
-                    <div class="subtask-actions">
-                        <button onclick="deleteSubTask({{ task.id }}, {{ sub.id }})" class="btn btn-sm btn-danger">🗑️</button>
-                    </div>
-
-                    <!-- Комментарии подзадачи -->
-                    <div class="subtask-comments">
-                        {% for comment in sub.comments.all %}
-                        <div class="subtask-comment">
-                            <div class="comment-content">{{ comment.content }}</div>
-                            <div class="comment-meta">
-                                <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
-                                <button onclick="deleteSubTaskComment({{ sub.id }}, {{ comment.id }})" class="btn btn-sm btn-danger">🗑️</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        <div class="add-subtask-comment">
-                            <textarea class="form-control subtask-comment-input" placeholder="Комментарий..." rows="2" onkeydown="if(event.ctrlKey && event.keyCode==13) addSubTaskComment({{ sub.id }}, this)"></textarea>
-                            <button onclick="addSubTaskComment({{ sub.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">💬</button>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-
-                <div class="add-subtask">
-                    <input type="text" class="form-control subtask-input" placeholder="Добавить подзадачу..." onkeydown="if(event.keyCode==13) addSubTask({{ task.id }}, this)">
-                    <button onclick="addSubTask({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">+</button>
-                </div>
-            </div>
-            {% endwith %}
-
-            <!-- Комментарии к задаче -->
-            <div class="comments-section">
-                <div class="comments-list">
-                    {% for comment in task.comments.all %}
-                    <div class="comment-item">
-                        <div class="comment-content">{{ comment.content }}</div>
-                        <div class="comment-meta">
-                            <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
-                            <button onclick="deleteTaskComment({{ task.id }}, {{ comment.id }})" class="btn btn-sm btn-danger">🗑️</button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <div class="add-comment">
-                    <textarea class="form-control comment-input" placeholder="Добавить комментарий (Ctrl+Enter)..." rows="2" onkeydown="if(event.ctrlKey && event.keyCode==13) addTaskComment({{ task.id }}, this)"></textarea>
-                    <button onclick="addTaskComment({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">💬</button>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="card empty-state">
-            <div class="empty-icon">📝</div>
-            <h3>Пока нет ежедневных задач</h3>
-            <p>Добавьте первую задачу для отслеживания прогресса</p>
-        </div>
-        {% endfor %}
-    </div>
+  </div>
+  {% empty %}
+  <div class="card" style="text-align:center; color:#94a3b8;">Нет задач</div>
+  {% endfor %}
 </div>
 
 <!-- Модальное окно редактирования задачи -->
-<div id="editTaskModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <h3>Редактировать задачу</h3>
-        <form onsubmit="saveTaskEdit(event)">
-            <div class="form-group">
-                <label>Название задачи:</label>
-                <textarea id="editTaskTitle" class="form-control" rows="3" required></textarea>
-            </div>
-            <div class="form-group">
-                <label>Приоритет:</label>
-                <select id="editTaskPriority" class="form-control">
-                    <option value="1">🔴 Высокий</option>
-                    <option value="2">🟡 Средний</option>
-                    <option value="3">🟢 Низкий</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Срок выполнения:</label>
-                <input id="editTaskDueDate" type="date" class="form-control">
-            </div>
-            <input type="hidden" id="editTaskId">
-            <div class="modal-actions">
-                <button type="submit" class="btn btn-primary">Сохранить</button>
-                <button type="button" onclick="closeEditTaskModal()" class="btn btn-secondary">Отмена</button>
-            </div>
-        </form>
-    </div>
+<div id="editTaskModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <h3>Редактировать задачу</h3>
+    <form onsubmit="saveTaskEdit(event)">
+      <div class="form-group">
+        <label>Название:</label>
+        <textarea id="editTaskTitle" class="form-control" rows="3" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Приоритет:</label>
+        <select id="editTaskPriority" class="form-control">
+          <option value="1">🔴 Высокий</option>
+          <option value="2">🟡 Средний</option>
+          <option value="3">🟢 Низкий</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Срок:</label>
+        <input type="date" id="editTaskDueDate" class="form-control">
+      </div>
+      <input type="hidden" id="editTaskId">
+      <div class="modal-actions" style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <button type="button" onclick="closeEditTaskModal()" class="btn">Отмена</button>
+      </div>
+    </form>
+  </div>
 </div>
-
-<script>
-// Здесь будут JS функции для работы с daily_tasks
-// (добавление задачи, фильтрация, работа с подзадачами, комментариями, отчетами)
-// Для краткости я покажу только структуру, реализацию нужно будет написать отдельно.
-</script>
 {% endblock %}
