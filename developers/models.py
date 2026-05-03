@@ -96,6 +96,21 @@ class Task(models.Model):
             t += (timezone.now() - self.last_start_time).total_seconds()
         return t
 
+    @property
+    def formatted_total_time(self):
+        """Сохранённое время (без текущей сессии) в ЧЧ:ММ:СС"""
+        t = int(self.total_time or 0)
+        h, rem = divmod(t, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h:02d}:{m:02d}:{s:02d}"
+
+    @property
+    def formatted_total_time_with_current(self):
+        """Полное время с учётом запущенного таймера в ЧЧ:ММ:СС"""
+        t = int(self.total_time_with_current)
+        h, rem = divmod(t, 3600)
+        m, s = divmod(rem, 60)
+        return f"{h:02d}:{m:02d}:{s:02d}"
 
 class SubTask(models.Model):
     title = models.CharField(max_length=500, verbose_name="Название")

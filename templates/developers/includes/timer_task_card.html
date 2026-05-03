@@ -14,9 +14,8 @@
     </span>
     
     <div class="time-display current-time" 
-         data-initial-seconds="{{ task.total_time_with_current|floatformat:0 }}"
-         style="margin:0 0.5rem;">
-      {{ task.total_time_with_current|floatformat:0 }} сек
+        data-initial-seconds="{{ task.total_time_with_current|floatformat:0 }}">
+      {{ task.formatted_total_time_with_current }}
     </div>
 
     <!-- Кнопка таймера -->

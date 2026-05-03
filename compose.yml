@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: work_board
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app            # монтируем весь проект, db.sqlite3 остаётся на хосте
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=config.settings
