@@ -28,8 +28,10 @@ def daily_stats(request):
     try:
         session = DailyWorkSession.objects.get(user=request.user, date=today)
         current_seconds = session.total_with_current
+        is_timer_running = session.is_timer_running
     except DailyWorkSession.DoesNotExist:
         current_seconds = 0
+        is_timer_running = False
 
     end_date = today
     start_date = end_date - timedelta(days=6)
@@ -51,6 +53,7 @@ def daily_stats(request):
 
     return {
         "current_daily_seconds": current_seconds,
+        "is_daily_timer_running": is_timer_running,
         "week_stats": week_data,
         "week_total": week_total,
         "max_week_seconds": max_week_seconds,

@@ -1,15 +1,15 @@
-<div class="card earnings-widget">
+<div class="card earnings-widget" id="earningsWidget">
   <h3>💰 Заработок</h3>
   <div class="stat-item">
     <span class="stat-label">Всего заработано:</span>
-    <span class="stat-value">{{ total_earned|floatformat:2 }} ₽</span>
+    <span class="stat-value" id="totalEarned">{{ total_earned|floatformat:2 }} ₽</span>
   </div>
   <div class="stat-item">
     <span class="stat-label">Средний в месяц:</span>
-    <span class="stat-value">{{ average_monthly|floatformat:2 }} ₽</span>
+    <span class="stat-value" id="avgMonthly">{{ average_monthly|floatformat:2 }} ₽</span>
   </div>
   <div class="stat-item">
     <span class="stat-label">Месяцев:</span>
-    <span class="stat-value">{{ months_since }}</span>
+    <span class="stat-value" id="monthsSince">{{ months_since }}</span>
   </div>
 </div>

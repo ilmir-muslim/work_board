@@ -328,3 +328,53 @@ def api_transfer_previous_week_tasks(request):
         task.due_date = task.due_date + timedelta(days=7)
         task.save()
     return JsonResponse({"success": True, "transferred": count})
+
+
+@login_required
+@require_GET
+def api_earnings_widget(request):
+    from core.context_processors import earnings_summary as proc
+
+    data = proc(request)
+    return JsonResponse(data)
+
+
+@login_required
+@require_GET
+def api_daily_stats_widget(request):
+    today = timezone.now().date()
+    try:
+        session = DailyWorkSession.objects.get(user=request.user, date=today)
+        current_seconds = session.total_with_current
+        is_timer_running = session.is_timer_running
+    except DailyWorkSession.DoesNotExist:
+        current_seconds = 0
+        is_timer_running = False
+
+    end_date = today
+    start_date = end_date - timedelta(days=6)
+    week_sessions = DailyWorkSession.objects.filter(
+        user=request.user, date__range=[start_date, end_date]
+    )
+    week_data = []
+    for i in range(7):
+        day = start_date + timedelta(days=i)
+        sess = week_sessions.filter(date=day).first()
+        week_data.append(
+            {
+                "date": day.strftime("%Y-%m-%d"),
+                "total_seconds": int(sess.total_with_current) if sess else 0,
+            }
+        )
+    max_week_seconds = max((d["total_seconds"] for d in week_data), default=0)
+    week_total = sum(d["total_seconds"] for d in week_data)
+
+    return JsonResponse(
+        {
+            "current_daily_seconds": int(current_seconds),
+            "is_daily_timer_running": is_timer_running,
+            "week_stats": week_data,
+            "week_total": week_total,
+            "max_week_seconds": max_week_seconds,
+        }
+    )

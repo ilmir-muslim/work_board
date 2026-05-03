@@ -628,3 +628,131 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
 }
+
+/* ========== Живое обновление статистики ========== */
+let dailySeconds = 0;
+let isDailyTimerRunning = false;
+let dailyTimerInterval = null;
+let statsUpdateInterval = null;
+let earningsUpdateInterval = null;
+
+// Быстрое форматирование секунд для отладки (можно использовать formatTime из основного кода)
+function formatSecondsShort(sec) {
+    return sec + ' сек';
+}
+
+// Перерисовка недельных баров
+function renderWeekBars(data) {
+    const container = document.getElementById('weekBars');
+    if (!container || !data.week_stats) return;
+    const max = data.max_week_seconds || 1;
+    container.innerHTML = data.week_stats.map(day => {
+        const percent = (day.total_seconds / max) * 100;
+        const [y, m, d] = day.date.split('-');
+        const dayStr = d.padStart(2, '0') + '.' + m.padStart(2, '0');
+        return `
+            <div class="day-bar">
+                <div class="day-label" style="white-space:nowrap;">${dayStr}</div>
+                <div class="bar-bg">
+                    <div class="bar-fill" style="width: ${percent}%;"></div>
+                </div>
+                <div class="day-value">${day.total_seconds}с</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Обновление всех показателей из данных API
+function applyDailyStats(data) {
+    dailySeconds = data.current_daily_seconds;
+    isDailyTimerRunning = data.is_daily_timer_running;
+    document.getElementById('todayTime').textContent = dailySeconds + ' сек';
+    renderWeekBars(data);
+    document.getElementById('weekTotal').textContent =
+        `Всего за неделю: ${data.week_total} сек`;
+
+    // Управление локальным секундомером
+    if (isDailyTimerRunning && !dailyTimerInterval) {
+        startLocalDailyTicker();
+    } else if (!isDailyTimerRunning && dailyTimerInterval) {
+        stopLocalDailyTicker();
+    }
+}
+
+// Запуск локального секундомера (каждую секунду увеличиваем dailySeconds)
+function startLocalDailyTicker() {
+    if (dailyTimerInterval) return;
+    dailyTimerInterval = setInterval(() => {
+        dailySeconds++;
+        document.getElementById('todayTime').textContent = dailySeconds + ' сек';
+    }, 1000);
+}
+
+// Остановка локального секундомера
+function stopLocalDailyTicker() {
+    clearInterval(dailyTimerInterval);
+    dailyTimerInterval = null;
+}
+
+// Запрос данных дневной статистики
+async function fetchDailyStats() {
+    try {
+        const response = await fetch('/developers/api/daily-stats-widget/');
+        if (!response.ok) return;
+        const data = await response.json();
+        applyDailyStats(data);
+    } catch (e) {
+        console.error('Ошибка получения дневной статистики', e);
+    }
+}
+
+// Запрос данных заработка
+async function fetchEarnings() {
+    try {
+        const response = await fetch('/developers/api/earnings-widget/');
+        if (!response.ok) return;
+        const data = await response.json();
+        const totalEl = document.getElementById('totalEarned');
+        const avgEl = document.getElementById('avgMonthly');
+        const monthsEl = document.getElementById('monthsSince');
+        if (totalEl) totalEl.textContent = data.total_earned.toFixed(2) + ' ₽';
+        if (avgEl) avgEl.textContent = data.average_monthly.toFixed(2) + ' ₽';
+        if (monthsEl) monthsEl.textContent = data.months_since;
+    } catch (e) {
+        console.error('Ошибка получения заработка', e);
+    }
+}
+
+// Инициализация (вызывается при загрузке страницы)
+function initLiveStats() {
+    // Первый запрос для заполнения виджетов реальными данными
+    fetchDailyStats();
+    fetchEarnings();
+
+    // Периодическое обновление (раз в 30 секунд)
+    statsUpdateInterval = setInterval(fetchDailyStats, 30000);
+    earningsUpdateInterval = setInterval(fetchEarnings, 30000);
+}
+
+// Принудительное обновление после ручного запуска/паузы таймера задачи
+function refreshLiveStatsNow() {
+    fetchDailyStats();
+    fetchEarnings();
+}
+
+// Добавляем вызовы обновления в существующие функции старта/паузы таймеров
+// (в файле developer.js уже есть startTimer и pauseTimer, дополним их)
+const originalStartTimer = window.startTimer;
+window.startTimer = async function (taskId) {
+    if (originalStartTimer) await originalStartTimer(taskId);
+    refreshLiveStatsNow();
+};
+
+const originalPauseTimer = window.pauseTimer;
+window.pauseTimer = async function (taskId) {
+    if (originalPauseTimer) await originalPauseTimer(taskId);
+    refreshLiveStatsNow();
+};
+
+// Запуск инициализации после готовности DOM
+document.addEventListener('DOMContentLoaded', initLiveStats);

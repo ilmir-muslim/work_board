@@ -1,21 +1,7 @@
-<div class="card daily-stats-widget">
+<div class="card daily-stats-widget" id="dailyStatsWidget">
   <h3>📊 Сегодня</h3>
-  <div class="today-time">
-    {{ current_daily_seconds|floatformat:0 }} сек
-  </div>
+  <div class="today-time" id="todayTime">-- сек</div>
   <h4 style="margin-top:1rem;">Неделя</h4>
-  <div class="week-bars">
-    {% for day in week_stats %}
-      <div class="day-bar">
-        <div class="day-label">{{ day.date|slice:"5:" }}</div>
-        <div class="bar-bg">
-          <div class="bar-fill" style="width: {% widthratio day.total_seconds max_week_seconds 100 %}%;"></div>
-        </div>
-        <div class="day-value">{{ day.total_seconds|floatformat:0 }}с</div>
-      </div>
-    {% endfor %}
-  </div>
-  <div style="margin-top:0.5rem; font-weight:600;">
-    Всего за неделю: {{ week_total|floatformat:0 }} сек
-  </div>
+  <div class="week-bars" id="weekBars"></div>
+  <div style="margin-top:0.5rem; font-weight:600;" id="weekTotal">Всего за неделю: -- сек</div>
 </div>

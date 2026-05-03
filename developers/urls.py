@@ -1,6 +1,8 @@
 from django.urls import path
 from developers.api import (
     api_create_project,
+    api_daily_stats_widget,
+    api_earnings_widget,
     api_start_timer,
     api_pause_timer,
     api_stop_all_timers,
@@ -141,5 +143,9 @@ urlpatterns = [
         "api/tasks/transfer-previous-week/",
         api_transfer_previous_week_tasks,
         name="api_transfer_previous_week",
+    ),
+    path("api/earnings-widget/", api_earnings_widget, name="api_earnings_widget"),
+    path(
+        "api/daily-stats-widget/", api_daily_stats_widget, name="api_daily_stats_widget"
     ),
 ]
