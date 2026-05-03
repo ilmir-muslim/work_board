@@ -3,6 +3,29 @@
 // Глобальная переменная CSRF-токена доступна из шаблона tracker_base.html
 
 // ---------------------------------------------------------------
+//  Инициализация начальных отображений времени
+// ---------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', function () {
+    initializeTimerDisplays();
+});
+
+/**
+ * Преобразует все элементы с data-initial-seconds в форматированное время
+ * и устанавливает data-seconds для дальнейшего динамического пересчёта.
+ */
+function initializeTimerDisplays() {
+    document.querySelectorAll('.current-time').forEach(el => {
+        // Берём значение из data-initial-seconds, если есть
+        const initial = el.getAttribute('data-initial-seconds');
+        const seconds = initial ? parseFloat(initial) : 0;
+        el.textContent = formatTime(seconds);
+        el.setAttribute('data-seconds', seconds);
+    });
+    // Первичный расчёт общего времени после инициализации
+    updateProjectTotals();
+}
+
+// ---------------------------------------------------------------
 //  Базовые утилиты и работа со ставкой
 // ---------------------------------------------------------------
 function openRateModal() {
@@ -53,7 +76,8 @@ function deleteProject() {
 }
 
 function editProjectName() {
-    const newName = prompt('Новое название проекта:', document.querySelector('h1').textContent.trim());
+    const newName = prompt('Новое название проекта:',
+        document.querySelector('h1').textContent.trim());
     if (newName) {
         fetch(`/developers/api/projects/${currentProjectId}/update/`, {
             method: 'POST',
@@ -160,6 +184,16 @@ async function toggleTaskCompletion(taskId, checked) {
 // ---------------------------------------------------------------
 
 /**
+ * Форматирует секунды в виде "Xч Yм Zс".
+ */
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours}ч ${minutes}м ${secs}с`;
+}
+
+/**
  * Возвращает HTML-код кнопки старта/паузы в зависимости от состояния.
  */
 function renderTimerButton(isRunning) {
@@ -180,8 +214,62 @@ function updateTimerButton(taskId, isRunning) {
     }
 }
 
+/**
+ * Пересчитывает и обновляет общее время проекта и заработок.
+ */
+function updateProjectTotals() {
+    let totalSeconds = 0;
+    document.querySelectorAll('.current-time').forEach(el => {
+        const sec = parseFloat(el.getAttribute('data-seconds')) || 0;
+        totalSeconds += sec;
+    });
+
+    const totalEl = document.getElementById('projectTotalTime');
+    if (totalEl) {
+        totalEl.textContent = formatTime(totalSeconds);
+    }
+
+    const rateEl = document.querySelector('.project-rate');
+    if (rateEl) {
+        const rateText = rateEl.textContent.trim();
+        const rateMatch = rateText.match(/[\d.]+/);
+        const rate = rateMatch ? parseFloat(rateMatch[0]) : 0;
+        const earned = (totalSeconds * rate / 3600).toFixed(2);
+        const earnedEl = document.getElementById('earnedAmount');
+        if (earnedEl) {
+            earnedEl.textContent = `${earned} ₽`;
+        }
+    }
+}
+
+/**
+ * Живое обновление времени, кнопок и общего времени проекта.
+ */
+function updateLiveTimers() {
+    document.querySelectorAll('.timer-task-card[data-task-id]').forEach(card => {
+        const taskId = card.dataset.taskId;
+        fetch(`/developers/api/task-current-time/${taskId}/`)
+            .then(r => r.json())
+            .then(data => {
+                const timeEl = card.querySelector('.current-time');
+                if (timeEl) {
+                    timeEl.textContent = formatTime(data.total_time);
+                    timeEl.setAttribute('data-seconds', data.total_time);
+                }
+                if (data.is_timer_running) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+                updateTimerButton(taskId, data.is_timer_running);
+
+                // После обновления каждой задачи пересчитываем итоги
+                updateProjectTotals();
+            });
+    });
+}
+
 async function startTimer(taskId) {
-    // Оптимистично меняем кнопку на "Пауза"
     updateTimerButton(taskId, true);
     try {
         await fetch(`/developers/api/timer/start/${taskId}/`, {
@@ -190,13 +278,11 @@ async function startTimer(taskId) {
         });
         if (typeof updateLiveTimers === 'function') updateLiveTimers();
     } catch (e) {
-        // В случае ошибки возвращаем кнопку "Старт"
         updateTimerButton(taskId, false);
     }
 }
 
 async function pauseTimer(taskId) {
-    // Оптимистично меняем кнопку на "Старт"
     updateTimerButton(taskId, false);
     try {
         await fetch(`/developers/api/timer/pause/${taskId}/`, {
@@ -205,7 +291,6 @@ async function pauseTimer(taskId) {
         });
         if (typeof updateLiveTimers === 'function') updateLiveTimers();
     } catch (e) {
-        // В случае ошибки возвращаем кнопку "Пауза"
         updateTimerButton(taskId, true);
     }
 }
@@ -216,28 +301,6 @@ async function stopAllTimers() {
         headers: { 'X-CSRFToken': csrfToken }
     });
     location.reload();
-}
-
-/**
- * Живое обновление времени и состояния кнопок для всех таймеров на странице.
- */
-function updateLiveTimers() {
-    document.querySelectorAll('.timer-task-card[data-task-id]').forEach(card => {
-        const taskId = card.dataset.taskId;
-        fetch(`/developers/api/task-current-time/${taskId}/`)
-            .then(r => r.json())
-            .then(data => {
-                const timeEl = card.querySelector('.current-time');
-                if (timeEl) timeEl.textContent = data.total_time_formatted;
-                if (data.is_timer_running) {
-                    card.classList.add('active');
-                } else {
-                    card.classList.remove('active');
-                }
-                // Обновляем кнопку
-                updateTimerButton(taskId, data.is_timer_running);
-            });
-    });
 }
 
 // ---------------------------------------------------------------
@@ -285,7 +348,7 @@ async function toggleSubTaskCompletion(taskId, subtaskId, checked) {
 }
 
 // ---------------------------------------------------------------
-//  Статические комментарии (с перезагрузкой) – оставлены для совместимости
+//  Статические комментарии (с перезагрузкой)
 // ---------------------------------------------------------------
 async function addTaskComment(taskId, textarea) {
     const content = textarea.value.trim();
@@ -331,9 +394,6 @@ async function deleteSubTaskComment(subtaskId, commentId) {
 //  Динамические комментарии (без перезагрузки, для вкладки таймера)
 // ---------------------------------------------------------------
 
-/**
- * Экранирование HTML для безопасной вставки пользовательского текста.
- */
 function escapeHtml(text) {
     const map = {
         '&': '&amp;',
@@ -345,9 +405,6 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-/**
- * Показать/скрыть блок комментариев у задачи.
- */
 function toggleCommentsBlock(button, taskId) {
     const block = button.nextElementSibling;
     if (block.style.display === 'none' || !block.style.display) {
@@ -360,9 +417,6 @@ function toggleCommentsBlock(button, taskId) {
     }
 }
 
-/**
- * Динамически добавить комментарий к задаче (без перезагрузки).
- */
 async function addTaskCommentDynamic(taskId, textarea) {
     const content = textarea.value.trim();
     if (!content) return;
@@ -376,7 +430,6 @@ async function addTaskCommentDynamic(taskId, textarea) {
         if (!response.ok) throw new Error('Ошибка сервера');
         const comment = await response.json();
 
-        // Создаём HTML-элемент комментария
         const commentDiv = document.createElement('div');
         commentDiv.className = 'comment-item';
         commentDiv.setAttribute('data-comment-id', comment.id);
@@ -398,16 +451,13 @@ async function addTaskCommentDynamic(taskId, textarea) {
             <div style="font-size:0.75rem; color:#64748b; margin-top:0.2rem;">${dateStr}</div>
         `;
 
-        // Вставляем в список комментариев
         const list = document.querySelector(`.comments-list[data-task-id="${taskId}"]`);
         if (list) {
             list.appendChild(commentDiv);
         }
 
-        // Очищаем поле ввода
         textarea.value = '';
 
-        // Обновляем счётчик на кнопке-переключателе
         const toggleBtn = document.querySelector(
             `.timer-task-card[data-task-id="${taskId}"] button[onclick*="toggleCommentsBlock"]`
         );
@@ -426,9 +476,6 @@ async function addTaskCommentDynamic(taskId, textarea) {
     }
 }
 
-/**
- * Динамически удалить комментарий (без перезагрузки).
- */
 async function deleteTaskCommentDynamic(taskId, commentId) {
     if (!confirm('Удалить комментарий?')) return;
     try {
@@ -438,13 +485,11 @@ async function deleteTaskCommentDynamic(taskId, commentId) {
         });
         if (!response.ok) throw new Error('Ошибка сервера');
 
-        // Удаляем элемент из DOM
         const commentEl = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`);
         if (commentEl) {
             commentEl.remove();
         }
 
-        // Обновляем счётчик на кнопке
         const list = document.querySelector(`.comments-list[data-task-id="${taskId}"]`);
         const count = list ? list.children.length : 0;
         const toggleBtn = document.querySelector(
@@ -505,7 +550,6 @@ function exportToTxt() {
 }
 
 function copyToClipboard() {
-    // Простейшая реализация; может быть расширена
     const reportText = document.getElementById('reportContent')?.innerText || '';
     navigator.clipboard.writeText(reportText).then(() => alert('Скопировано в буфер обмена'));
 }

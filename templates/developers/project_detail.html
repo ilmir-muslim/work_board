@@ -14,7 +14,7 @@
   <div class="project-earnings">
     <div class="earnings-item">
       <span class="label">Ставка</span>
-      <span class="value">{{ project.hourly_rate }} ₽/ч</span>
+      <span class="value project-rate">{{ project.hourly_rate }} ₽/ч</span>
     </div>
     <div class="earnings-item">
       <span class="label">Заработано</span>
@@ -24,7 +24,7 @@
 
   <div class="total-time">
     <span class="label">Общее время проекта</span>
-    <span class="time" id="projectTotalTime">{{ project.total_time|floatformat:0 }} сек</span>
+    <span class="time" id="projectTotalTime">{{ project.total_time }} сек</span>
   </div>
 
   <div class="project-stats">
@@ -121,25 +121,10 @@
 {% block extra_js %}
 <script>
   var currentProjectId = {{ project.id }};
-  function updateLiveTimers() {
-    document.querySelectorAll('.timer-task-card[data-task-id]').forEach(card => {
-      const taskId = card.dataset.taskId;
-      fetch(`/developers/api/task-current-time/${taskId}/`)
-        .then(r => r.json())
-        .then(data => {
-          const timeEl = card.querySelector('.current-time');
-          if (timeEl) timeEl.textContent = data.total_time_formatted;
-          if (data.is_timer_running) {
-            card.classList.add('active');
-          } else {
-            card.classList.remove('active');
-          }
-        });
-    });
-    // Обновление общего времени и заработка (можно сделать отдельный запрос или пересчёт на клиенте)
-    // Для простоты будем обновлять всё раз в 5 секунд
-  }
+  
+  // Запуск живого обновления
   setInterval(updateLiveTimers, 1000);
+  // Первичный вызов после загрузки страницы
   updateLiveTimers();
 </script>
 {% endblock %}
