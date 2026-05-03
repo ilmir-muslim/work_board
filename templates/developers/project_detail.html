@@ -1,7 +1,7 @@
-{% extends 'tracker_base.html' %}
+{% extends 'tracker_base_with_columns.html' %}
 {% load static %}
 
-{% block content %}
+{% block main_content %}
 <div class="project-info-card">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
     <h2 id="projectName">📋 {{ project.name }}</h2>

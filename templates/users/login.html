@@ -1,18 +1,15 @@
 <!-- templates/users/login.html -->
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block main_content %}
 <div class="login-container">
-    <div class="login-card">
-        <h2>Вход в систему</h2>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Войти</button>
-        </form>
-        <p class="register-link">
-            Нет аккаунта? <a href="{% url 'users:register' %}">Зарегистрироваться</a>
-        </p>
-    </div>
+  <div class="login-card">
+    <h2>Вход в систему</h2>
+    <form method="post">
+      {% csrf_token %} {{ form.as_p }}
+      <button type="submit">Войти</button>
+    </form>
+    <p class="register-link">
+      Нет аккаунта? <a href="{% url 'users:register' %}">Зарегистрироваться</a>
+    </p>
+  </div>
 </div>
 {% endblock %}

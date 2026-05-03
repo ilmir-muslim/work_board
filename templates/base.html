@@ -1,23 +1,74 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>{% block title %}Учёт времени{% endblock %}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
-        .login-container, .register-container { max-width: 400px; margin: 50px auto; }
-        .login-card, .register-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; margin-bottom: 20px; }
-        form p { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #0056b3; }
-        .login-link, .register-link { text-align: center; margin-top: 15px; }
-        .errorlist { color: red; margin: 0; padding: 0; list-style: none; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f4f4f4;
+      }
+      .login-container,
+      .register-container {
+        max-width: 400px;
+        margin: 50px auto;
+      }
+      .login-card,
+      .register-card {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      form p {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .login-link,
+      .register-link {
+        text-align: center;
+        margin-top: 15px;
+      }
+      .errorlist {
+        color: red;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
     </style>
-</head>
-<body class="{% block body_class %}{% endblock %}">
-    {% block content %}{% endblock %}
-</body>
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+    {% block main_content %}{% endblock %}
+  </body>
 </html>

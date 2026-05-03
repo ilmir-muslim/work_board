@@ -1,0 +1,19 @@
+{% extends 'tracker_base.html' %}
+
+{% block content %}
+<div class="content-area">
+  <aside class="left-column">
+    {% include 'developers/includes/earnings_summary.html' %}
+  </aside>
+
+  <div class="main-column">
+    <div class="main-content-limited">
+      {% block main_content %}{% endblock %}
+    </div>
+  </div>
+
+  <aside class="right-column">
+    {% include 'developers/includes/daily_stats_widget.html' %}
+  </aside>
+</div>
+{% endblock %}
