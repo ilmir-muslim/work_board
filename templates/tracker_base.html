@@ -211,6 +211,7 @@
       <div class="nav" style="margin-bottom: 0;">
         <a href="{% url 'developers:project_list' %}" class="btn">📁 Проекты</a>
         <a href="{% url 'developers:daily_tasks' %}" class="btn">📅 Ежедневные</a>
+        <a href="{% url 'developers:my_assignments' %}" class="btn">📥 Назначения</a>
         <form method="post" action="{% url 'users:logout' %}" style="display:inline;">
           {% csrf_token %}
           <button type="submit" class="btn btn-logout">Выйти</button>

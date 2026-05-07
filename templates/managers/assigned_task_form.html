@@ -1,0 +1,99 @@
+{% extends 'managers/manager_base.html' %}
+{% block title %}Назначить задачу{% endblock %}
+{% block content %}
+<h2>📋 Назначить задачу</h2>
+<div class="card">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Название</label>
+      {{ form.title }}
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      {{ form.description }}
+    </div>
+    <div class="form-group">
+      <label>Исполнитель</label>
+      {{ form.assignee }}
+    </div>
+    <div class="form-group">
+      <label>Проект (необязательно)</label>
+      {{ form.project }}
+    </div>
+
+    <!-- Блок с файлами -->
+    <div class="form-group">
+      <label>Прикрепить файлы</label>
+      <div id="attachments-container">
+        <div class="attachment-row" style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+          <input type="file" name="attachments" class="form-control" style="flex:1;">
+          <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm" onclick="addAttachmentRow()" style="margin-top:0.3rem;">+ Добавить файл</button>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">✅ Назначить</button>
+      <a href="{% url 'managers:developer_list' %}" class="btn">Отмена</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function addAttachmentRow() {
+  const container = document.getElementById('attachments-container');
+  const row = document.createElement('div');
+  row.className = 'attachment-row';
+  row.style.cssText = 'display:flex; gap:0.5rem; margin-bottom:0.5rem;';
+  row.innerHTML = `
+    <input type="file" name="attachments" class="form-control" style="flex:1;">
+    <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>
+  `;
+  container.appendChild(row);
+}
+</script>
+
+<style>
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+    color: #2d2b55;
+  }
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 2px solid #dfd7f2;
+    border-radius: 1rem;
+    font-size: 1rem;
+    background: #faf9ff;
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus {
+    border-color: #7c6fe0;
+    box-shadow: 0 0 0 4px rgba(124,111,224,0.12);
+  }
+  .form-actions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+  .errorlist {
+    color: #b91c1c;
+    list-style: none;
+    padding: 0;
+    margin: 0.3rem 0 0 0;
+  }
+</style>
+{% endblock %}

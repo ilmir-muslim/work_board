@@ -8,7 +8,7 @@
     <div style="display: flex; gap: 0.5rem;">
       <button onclick="editProjectName()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">✏️ Название</button>
       <button onclick="editProjectRate()" class="btn" style="color: white; border: 1px solid rgba(255,255,255,0.5);">💰 Ставка</button>
-        <button onclick="deleteProject()" class="btn btn-danger">🗑️ Удалить проект</button>
+      <button onclick="deleteProject()" class="btn btn-danger">🗑️ Удалить проект</button>
     </div>
   </div>
 
@@ -34,7 +34,7 @@
       <span class="stat-label">Всего задач</span>
     </div>
     <div class="stat-item">
-      <span class="stat-number">{{ completed_tasks_count }}</span>
+      <span class="stat-number" id="completedTasksCount">{{ completed_tasks_count }}</span>
       <span class="stat-label">Выполнено задач</span>
     </div>
     <div class="stat-item">
@@ -48,59 +48,123 @@
   </div>
 </div>
 
-
-
-
-<!-- Вкладки -->
-<div class="filters" style="margin-bottom:1rem;">
-  <button onclick="switchTab('timer')" class="filter-btn tab-btn {% if active_tab == 'timer' %}active{% endif %}" id="tab-timer">⏱️ Таймер</button>
-  <button onclick="switchTab('tasks')" class="filter-btn tab-btn {% if active_tab == 'tasks' %}active{% endif %}" id="tab-tasks">✅ Задачи</button>
-</div>
-
-<!-- Вкладка таймера -->
-<div id="timer-tab" {% if active_tab != 'timer' %}style="display:none;"{% endif %}>
-  <div class="card">
-    <textarea id="newTimerTaskTitle" placeholder="Новая задача для отслеживания времени..." class="form-control" rows="3"></textarea>
-    <button onclick="addTimerTask()" class="btn btn-primary" style="margin-top:0.5rem;">+ Добавить задачу</button>
-  </div>
-
-  <div id="timerTasksList">
-    {% for task in timer_tasks %}
-      {% include 'developers/includes/timer_task_card.html' %}
-    {% empty %}
-      <div class="card" style="text-align:center; color:#94a3b8;">Нет задач для таймера</div>
-    {% endfor %}
+<!-- Единая форма добавления задачи -->
+<div class="card">
+  <textarea id="newTaskTitle" placeholder="Новая задача..." class="form-control" rows="2"></textarea>
+  <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+    <select id="newTaskPriority" class="form-control" style="width:auto;">
+      <option value="1">🔴 Высокий</option>
+      <option value="2" selected>🟡 Средний</option>
+      <option value="3">🟢 Низкий</option>
+    </select>
+    <input type="date" id="newTaskDueDate" class="form-control" style="width:auto;">
+    <button onclick="addProjectTask()" class="btn btn-primary">Добавить</button>
   </div>
 </div>
 
-<!-- Вкладка задач -->
-<div id="tasks-tab" {% if active_tab != 'tasks' %}style="display:none;"{% endif %}>
-  <div class="card">
-    <textarea id="newTaskTitle" placeholder="Новая задача..." class="form-control" rows="2"></textarea>
-    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-      <select id="newTaskPriority" class="form-control" style="width:auto;">
-        <option value="1">🔴 Высокий</option>
-        <option value="2" selected>🟡 Средний</option>
-        <option value="3">🟢 Низкий</option>
-      </select>
-      <input type="date" id="newTaskDueDate" class="form-control" style="width:auto;">
-      <button onclick="addProjectTask()" class="btn btn-primary">Добавить</button>
+<!-- Фильтры -->
+<div class="filters">
+  <button onclick="filterTasks('all')" class="filter-btn active" id="filter-all">Все</button>
+  <button onclick="filterTasks('active')" class="filter-btn" id="filter-active">Активные</button>
+  <button onclick="filterTasks('completed')" class="filter-btn" id="filter-completed">Завершённые</button>
+</div>
+
+<!-- Единый список задач с таймерами, подзадачами и комментариями -->
+<div id="tasksList">
+  {% for task in tasks %}
+  <div class="task-item timer-task-card" data-task-id="{{ task.id }}"
+       data-completed="{{ task.is_completed|lower }}" 
+       style="flex-direction: column; align-items: stretch;">
+
+    <!-- Основная строка с чекбоксом, названием, приоритетом, датой и кнопками -->
+    <div style="display: flex; align-items: center; gap: 0.8rem;">
+      <input type="checkbox" 
+             {% if task.is_completed %}checked{% endif %}
+             onchange="toggleTaskCompletion({{ task.id }}, this.checked)" 
+             class="task-checkbox">
+
+      <span class="task-text" style="flex:1; font-size: 1.1rem; 
+        {% if task.is_completed %}text-decoration: line-through; color: #94a3b8;{% endif %}">
+        {{ task.title }}
+      </span>
+
+      <span style="color:#64748b;">{{ task.get_priority_display }}</span>
+      {% if task.due_date %}<span style="color:#64748b;">📅 {{ task.due_date|date:"d.m.Y" }}</span>{% endif %}
+
+      <div class="time-display current-time" 
+          data-initial-seconds="{{ task.total_time_with_current|floatformat:0 }}">
+        {{ task.formatted_total_time_with_current }}
+      </div>
+
+      <!-- Кнопка таймера -->
+      <span class="timer-btn-container" data-task-id="{{ task.id }}">
+        {% if task.is_timer_running %}
+          <button onclick="pauseTimer({{ task.id }})" class="btn btn-warning timer-action">⏸ Пауза</button>
+        {% else %}
+          <button onclick="startTimer({{ task.id }})" class="btn btn-primary timer-action">▶ Старт</button>
+        {% endif %}
+      </span>
+
+      <button onclick="deleteTask({{ task.id }})" class="btn btn-sm btn-danger">✕</button>
+    </div>
+
+    <!-- Подзадачи -->
+    {% with subtasks=task.sub_tasks.all %}
+    {% if subtasks %}
+    <div style="width:100%; padding-left: 2rem; margin-top: 0.5rem;">
+      {% for sub in subtasks %}
+      <div class="subtask-item" data-subtask-id="{{ sub.id }}" style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+        <input type="checkbox" {% if sub.is_completed %}checked{% endif %}
+               onchange="toggleSubTaskCompletion({{ task.id }}, {{ sub.id }}, this.checked)" class="subtask-checkbox">
+        <span class="{% if sub.is_completed %}completed-text{% endif %}" ondblclick="editSubTask({{ sub.id }}, this)">{{ sub.title }}</span>
+        <button onclick="deleteSubTask({{ task.id }}, {{ sub.id }})" class="btn btn-sm btn-danger">🗑️</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="add-subtask" style="width:100%; padding-left:2rem; margin-top:0.3rem; display:flex; gap:0.3rem;">
+      <input type="text" class="form-control subtask-input" placeholder="Добавить подзадачу...">
+      <button onclick="addSubTask({{ task.id }}, this.previousElementSibling)" class="btn btn-sm btn-primary">+</button>
+    </div>
+    {% endwith %}
+
+    <!-- Комментарии -->
+    <div style="margin-top: 0.5rem;">
+      <button class="btn btn-sm" onclick="toggleCommentsBlock(this, {{ task.id }})" 
+              style="font-size:0.85rem; padding:0.3rem 0.8rem;">
+        💬 Комментарии ({{ task.comments.count }})
+      </button>
+
+      <div class="comments-block" data-task-id="{{ task.id }}" style="display:none; margin-top:0.5rem;">
+        <div class="comments-list" data-task-id="{{ task.id }}">
+          {% for comment in task.comments.all %}
+          <div class="comment-item" data-comment-id="{{ comment.id }}" 
+               style="background:#f9fafb; padding:0.5rem; border-radius:0.5rem; margin-bottom:0.3rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <span style="flex:1;">{{ comment.content }}</span>
+              <button onclick="deleteTaskCommentDynamic({{ task.id }}, {{ comment.id }})" 
+                      class="btn btn-sm btn-danger" style="margin-left:0.5rem;">🗑️</button>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:0.2rem;">
+              {{ comment.created_at|date:"d.m.Y H:i" }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="display:flex; gap:0.3rem; margin-top:0.3rem;">
+          <textarea class="form-control comment-input" 
+                    placeholder="Комментарий..." rows="1" 
+                    style="font-size:0.9rem; resize:vertical;"></textarea>
+          <button onclick="addTaskCommentDynamic({{ task.id }}, this.previousElementSibling)" 
+                  class="btn btn-sm btn-primary">💬</button>
+        </div>
+      </div>
     </div>
   </div>
-
-  <div class="filters">
-    <button onclick="filterProjectTasks('all')" class="filter-btn active" id="filter-all">Все</button>
-    <button onclick="filterProjectTasks('active')" class="filter-btn" id="filter-active">Активные</button>
-    <button onclick="filterProjectTasks('completed')" class="filter-btn" id="filter-completed">Завершённые</button>
-  </div>
-
-  <div id="projectTasksList">
-    {% for task in project_tasks %}
-      {% include 'developers/includes/project_task_card.html' %}
-    {% empty %}
-      <div class="card" style="text-align:center; color:#94a3b8;">Нет задач</div>
-    {% endfor %}
-  </div>
+  {% empty %}
+  <div class="card" style="text-align:center; color:#94a3b8;">Нет задач</div>
+  {% endfor %}
 </div>
 {% endblock %}
 
@@ -108,9 +172,21 @@
 <script>
   var currentProjectId = {{ project.id }};
   
-  // Запуск живого обновления
+  // Запуск живого обновления таймеров и времени
   setInterval(updateLiveTimers, 1000);
-  // Первичный вызов после загрузки страницы
   updateLiveTimers();
+  
+  // Функция фильтрации задач
+  function filterTasks(filter) {
+    document.querySelectorAll('#tasksList .task-item').forEach(item => {
+      const completed = item.dataset.completed === 'true';  // изменено на строчную 'true'
+      item.style.display =
+        filter === 'all' || (filter === 'active' && !completed) || (filter === 'completed' && completed)
+          ? ''
+          : 'none';
+    });
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`filter-${filter}`).classList.add('active');
+  }
 </script>
 {% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'managers/manager_base.html' %}
+{% block content %}
+<h2>Назначенная задача: {{ task.title }}</h2>
+<div class="card">
+    <p><strong>Описание:</strong> {{ task.description }}</p>
+    <p><strong>Создатель:</strong> {{ task.creator }}</p>
+    <p><strong>Исполнитель:</strong> {{ task.assignee }}</p>
+    <p><strong>Проект:</strong> {{ task.project }}</p>
+    <p><strong>Статус:</strong> <span class="status-{{ task.status }}">{{ task.get_status_display }}</span></p>
+    <p><strong>Создана:</strong> {{ task.created_at }}</p>
+    {% if task.accepted_at %}<p><strong>Принята:</strong> {{ task.accepted_at }}</p>{% endif %}
+
+    {% if task.attachments.exists %}
+    <h4>📎 Прикреплённые файлы</h4>
+    <ul>
+    {% for attachment in task.attachments.all %}
+        <li><a href="{{ attachment.file.url }}">{{ attachment.original_filename }}</a></li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endblock %}

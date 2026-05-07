@@ -171,11 +171,28 @@ async function toggleTaskCompletion(taskId, checked) {
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ is_completed: checked })
     });
+
+    // Обновляем визуальное состояние карточки задачи
     const card = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
     if (card) {
-        if (checked) card.classList.add('completed');
-        else card.classList.remove('completed');
+        if (checked) {
+            card.classList.add('completed');
+        } else {
+            card.classList.remove('completed');
+        }
+        // ВАЖНО: всегда приводим к строчному 'true'/'false'
         card.dataset.completed = checked.toString();
+    }
+
+    // Пересчитываем и обновляем счётчик выполненных задач
+    const allTaskCards = document.querySelectorAll('#tasksList .task-item');
+    const completedCount = Array.from(allTaskCards).filter(
+        item => item.dataset.completed === 'true'
+    ).length;
+
+    const counterElement = document.getElementById('completedTasksCount');
+    if (counterElement) {
+        counterElement.textContent = completedCount;
     }
 }
 
@@ -608,7 +625,7 @@ function openEditTimerTaskModal(taskId) {
 // ---------------------------------------------------------------
 function filterProjectTasks(filter) {
     document.querySelectorAll('#projectTasksList .task-item').forEach(item => {
-        const completed = item.dataset.completed === 'True';
+        const completed = item.dataset.completed === 'true';
         item.style.display =
             filter === 'all' || (filter === 'active' && !completed) || (filter === 'completed' && completed)
                 ? ''

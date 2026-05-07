@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
+
+from managers.models import AssignedTask, ProjectAssignment
 from .models import (
     DailyWorkSession,
     Project,
@@ -378,3 +380,68 @@ def api_daily_stats_widget(request):
             "max_week_seconds": max_week_seconds,
         }
     )
+
+
+@login_required
+@require_POST
+def api_accept_assigned_task(request, task_id):
+    task = get_object_or_404(AssignedTask, pk=task_id, assignee=request.user)
+    if task.status != "pending":
+        return JsonResponse({"error": "Задача уже обработана"}, status=400)
+    task.status = "accepted"
+    task.accepted_at = timezone.now()
+    task.save()
+    # создать обычную задачу разработчика на основе назначенной
+    new_task = Task.objects.create(
+        title=task.title,
+        owner=request.user,
+        project=task.project,
+        priority=2,
+        assigned_task=task,
+    )
+    return JsonResponse({"success": True, "task_id": new_task.id})
+
+
+@login_required
+@require_POST
+def api_reject_assigned_task(request, task_id):
+    task = get_object_or_404(AssignedTask, pk=task_id, assignee=request.user)
+    if task.status != "pending":
+        return JsonResponse({"error": "Задача уже обработана"}, status=400)
+    task.status = "rejected"
+    task.save()
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_POST
+def api_accept_project_assignment(request, assignment_id):
+    assignment = get_object_or_404(ProjectAssignment, pk=assignment_id, user=request.user)
+    if assignment.status != 'pending':
+        return JsonResponse({'error': 'Уже обработано'}, status=400)
+    # Создаём проект у разработчика, перенося данные из временного проекта
+    temp_project = assignment.project
+    real_project = Project.objects.create(
+        name=temp_project.name,
+        owner=request.user,
+        hourly_rate=temp_project.hourly_rate
+    )
+    assignment.status = 'accepted'
+    assignment.accepted_at = timezone.now()
+    assignment.save()
+    # Удаляем временный проект или оставляем, но меняем владельца – лучше удалить
+    temp_project.delete()
+    return JsonResponse({'success': True, 'project_id': real_project.id})
+
+
+@login_required
+@require_POST
+def api_reject_project_assignment(request, assignment_id):
+    assignment = get_object_or_404(
+        ProjectAssignment, pk=assignment_id, user=request.user
+    )
+    if assignment.status != "pending":
+        return JsonResponse({"error": "Назначение уже обработано"}, status=400)
+    assignment.status = "rejected"
+    assignment.save()
+    return JsonResponse({"success": True})

@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.db.models import F
 from datetime import timedelta
 
+from managers.models import AssignedTask, ProjectAssignment
+
 from .models import (
     Project,
     Task,
@@ -512,3 +514,70 @@ def daily_tasks(request):
         "completed_subtasks": 0,
     }
     return render(request, "developers/daily_tasks.html", context)
+
+
+@login_required
+def my_assignments(request):
+    """Список назначенных задач и проектов для текущего разработчика"""
+    tasks = AssignedTask.objects.filter(assignee=request.user).order_by("-created_at")
+    projects = ProjectAssignment.objects.filter(user=request.user).order_by(
+        "-created_at"
+    )
+    return render(
+        request,
+        "developers/my_assignments.html",
+        {
+            "assigned_tasks": tasks,
+            "project_assignments": projects,
+        },
+    )
+
+
+@login_required
+def accept_assigned_task(request, task_id):
+    task = get_object_or_404(AssignedTask, pk=task_id, assignee=request.user)
+    if task.status == "pending":
+        task.status = "accepted"
+        task.accepted_at = timezone.now()
+        task.save()
+        # Создаём обычную задачу разработчика на основе назначенной
+        new_task = Task.objects.create(
+            title=task.title,
+            owner=request.user,
+            project=task.project,
+            priority=2,
+            assigned_task=task,
+        )
+    return redirect("developers:my_assignments")
+
+
+@login_required
+def reject_assigned_task(request, task_id):
+    task = get_object_or_404(AssignedTask, pk=task_id, assignee=request.user)
+    if task.status == "pending":
+        task.status = "rejected"
+        task.save()
+    return redirect("developers:my_assignments")
+
+
+@login_required
+def accept_project_assignment(request, assignment_id):
+    assignment = get_object_or_404(
+        ProjectAssignment, pk=assignment_id, user=request.user
+    )
+    if assignment.status == "pending":
+        assignment.status = "accepted"
+        assignment.accepted_at = timezone.now()
+        assignment.save()
+    return redirect("developers:my_assignments")
+
+
+@login_required
+def reject_project_assignment(request, assignment_id):
+    assignment = get_object_or_404(
+        ProjectAssignment, pk=assignment_id, user=request.user
+    )
+    if assignment.status == "pending":
+        assignment.status = "rejected"
+        assignment.save()
+    return redirect("developers:my_assignments")

@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Панель менеджера{% endblock %}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(160deg, #f0f0ff 0%, #e6ecfa 50%, #f5f3ff 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0;
+    }
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      background: #ffffff;
+      border-radius: 0 0 2rem 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+      padding: 2rem 2.5rem;
+      margin-bottom: 2rem;
+    }
+    h1, h2, h3 { color: #2d2b55; font-weight: 700; letter-spacing: -0.3px; }
+    h1 { font-size: 2.2rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.3rem; border-radius: 1rem; font-weight: 600;
+      transition: all 0.2s; color: #4a4a6a; text-decoration: none;
+      border: none; cursor: pointer; font-size: 0.9rem;
+      background: #eae4f7;
+    }
+    .btn:hover { background: #d5ccff; }
+    .btn-primary { background: linear-gradient(135deg, #7c6fe0, #5b4bd5); color: white; box-shadow: 0 4px 12px rgba(108,92,211,0.25); }
+    .btn-primary:hover { background: linear-gradient(135deg, #6a5acd, #4a3db5); }
+    .btn-danger { background: #fee2e2; color: #b91c1c; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+    .card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+      border-radius: 1.2rem; padding: 1.5rem;
+      border: 1px solid #eae4f7; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      margin-bottom: 1.2rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.9rem 1rem; border-bottom: 1px solid #f0edfa; }
+    th { color: #6d6d8a; font-weight: 600; font-size: 0.9rem; }
+    tr:hover { background: #faf9ff; }
+
+    .status-badge { padding: 0.2rem 0.8rem; border-radius: 2rem; font-size: 0.8rem; font-weight: 500; }
+    .status-pending { background: #ffedd5; color: #b45309; }
+    .status-accepted { background: #d1fae5; color: #065f46; }
+    .status-rejected { background: #fee2e2; color: #991b1b; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); display: none; justify-content: center;
+      align-items: center; z-index: 1000;
+    }
+    .modal-content {
+      background: white; border-radius: 1.5rem; padding: 2rem;
+      max-width: 500px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    }
+    .form-control {
+      width: 100%; padding: 0.7rem 1rem; border: 2px solid #dfd7f2;
+      border-radius: 1rem; font-size: 1rem; background: #faf9ff;
+      outline: none; margin-bottom: 1rem; transition: border 0.2s;
+    }
+    .form-control:focus { border-color: #7c6fe0; box-shadow: 0 0 0 4px rgba(124,111,224,0.12); }
+
+    .navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .navbar nav { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+    .badge { background: #7c6fe0; color: white; padding: 0.1rem 0.6rem; border-radius: 1rem; font-size: 0.75rem; margin-left: 0.3rem; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="container">
+    <div class="navbar">
+      <div>
+        <h1 style="margin:0;">👔 Панель менеджера</h1>
+        <span style="color:#64748b;">{{ user.username }} | Менеджер</span>
+      </div>
+        <nav>
+            <a href="{% url 'managers:developer_list' %}" class="btn">👥 Разработчики</a>
+            <a href="{% url 'managers:assigned_task_create' %}" class="btn">➕ Задача</a>
+            <a href="{% url 'managers:project_assignment_create' %}" class="btn">📁 Проект</a>
+            <a href="{% url 'managers:assigned_task_list' %}" class="btn">📋 Все задачи</a>
+            <form method="post" action="{% url 'users:logout' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Выйти</button>
+            </form>
+        </nav>
+    </div>
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <script>
+    const csrfToken = '{{ csrf_token }}';
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

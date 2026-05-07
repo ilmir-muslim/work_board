@@ -1,8 +1,12 @@
 from django.urls import path
 from developers.api import (
+    api_accept_assigned_task,
+    api_accept_project_assignment,
     api_create_project,
     api_daily_stats_widget,
     api_earnings_widget,
+    api_reject_assigned_task,
+    api_reject_project_assignment,
     api_start_timer,
     api_pause_timer,
     api_stop_all_timers,
@@ -147,5 +151,46 @@ urlpatterns = [
     path("api/earnings-widget/", api_earnings_widget, name="api_earnings_widget"),
     path(
         "api/daily-stats-widget/", api_daily_stats_widget, name="api_daily_stats_widget"
+    ),
+    path("assignments/", views.my_assignments, name="my_assignments"),
+    path(
+        "assignments/accept-task/<int:task_id>/",
+        views.accept_assigned_task,
+        name="accept_assigned_task",
+    ),
+    path(
+        "assignments/reject-task/<int:task_id>/",
+        views.reject_assigned_task,
+        name="reject_assigned_task",
+    ),
+    path(
+        "assignments/accept-project/<int:assignment_id>/",
+        views.accept_project_assignment,
+        name="accept_project_assignment",
+    ),
+    path(
+        "assignments/reject-project/<int:assignment_id>/",
+        views.reject_project_assignment,
+        name="reject_project_assignment",
+    ),
+    path(
+        "api/assignments/accept-task/<int:task_id>/",
+        api_accept_assigned_task,
+        name="api_accept_assigned_task",
+    ),
+    path(
+        "api/assignments/reject-task/<int:task_id>/",
+        api_reject_assigned_task,
+        name="api_reject_assigned_task",
+    ),
+    path(
+        "api/assignments/accept-project/<int:assignment_id>/",
+        api_accept_project_assignment,
+        name="api_accept_project_assignment",
+    ),
+    path(
+        "api/assignments/reject-project/<int:assignment_id>/",
+        api_reject_project_assignment,
+        name="api_reject_project_assignment",
     ),
 ]

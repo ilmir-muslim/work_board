@@ -1,0 +1,165 @@
+{% extends 'tracker_base_with_columns.html' %}
+{% load static %}
+
+{% block main_content %}
+<h1>📥 Назначенные задачи и проекты</h1>
+
+<div id="assignments-container">
+  <!-- Назначенные задачи -->
+  <h2>Задачи</h2>
+  <div id="assigned-tasks">
+    {% for task in assigned_tasks %}
+    <div class="task-item assignment-item" data-id="{{ task.id }}" data-type="task" data-status="{{ task.status }}">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong>{{ task.title }}</strong>
+          {% if task.project %}<span style="font-size:0.9rem;"> ({{ task.project.name }})</span>{% endif %}
+        </div>
+        <span class="status-badge status-{{ task.status }}">{{ task.get_status_display }}</span>
+      </div>
+      {% if task.description %}<div style="font-size:0.85rem; color:#555; margin:0.3rem 0;">{{ task.description }}</div>{% endif %}
+      <div style="font-size:0.75rem; color: #94a3b8;">Создана: {{ task.created_at|date:"d.m.Y H:i" }}</div>
+
+      {% if task.attachments.exists %}
+      <div style="margin-top:0.3rem;">
+        📎
+        {% for att in task.attachments.all %}
+          <a href="{{ att.file.url }}" target="_blank">{{ att.original_filename }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if task.status == 'pending' %}
+      <div class="action-buttons" style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="acceptAssignment('task', {{ task.id }})" class="btn btn-primary btn-sm">✅ Принять</button>
+        <button onclick="rejectAssignment('task', {{ task.id }})" class="btn btn-danger btn-sm">❌ Отклонить</button>
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p style="color:#94a3b8;">Нет назначенных задач</p>
+    {% endfor %}
+  </div>
+
+  <!-- Назначенные проекты -->
+  <h2 style="margin-top:2rem;">Проекты</h2>
+  <div id="assigned-projects">
+    {% for assignment in project_assignments %}
+    <div class="task-item assignment-item" data-id="{{ assignment.id }}" data-type="project" data-status="{{ assignment.status }}">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>{{ assignment.project.name }}</strong>
+        <span class="status-badge status-{{ assignment.status }}">{{ assignment.get_status_display }}</span>
+      </div>
+      <div style="font-size:0.75rem; color:#94a3b8;">Назначен: {{ assignment.created_at|date:"d.m.Y H:i" }}</div>
+
+      {% if assignment.attachments.exists %}
+      <div style="margin-top:0.3rem;">
+        📎
+        {% for att in assignment.attachments.all %}
+          <a href="{{ att.file.url }}" target="_blank">{{ att.original_filename }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if assignment.status == 'pending' %}
+      <div class="action-buttons" style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="acceptAssignment('project', {{ assignment.id }})" class="btn btn-primary btn-sm">✅ Принять</button>
+        <button onclick="rejectAssignment('project', {{ assignment.id }})" class="btn btn-danger btn-sm">❌ Отклонить</button>
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p style="color:#94a3b8;">Нет назначенных проектов</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// csrfToken уже объявлен в родительском шаблоне tracker_base.html
+
+function updateStatusBadge(element, newStatus) {
+  const badge = element.querySelector('.status-badge');
+  const statusMap = {
+    'accepted': 'Принято',
+    'rejected': 'Отклонено',
+    'pending': 'Ожидает'
+  };
+  if (badge) {
+    badge.textContent = statusMap[newStatus] || newStatus;
+    badge.className = `status-badge status-${newStatus}`;
+  }
+}
+
+function removeActionButtons(element) {
+  const actions = element.querySelector('.action-buttons');
+  if (actions) actions.remove();
+}
+
+async function acceptAssignment(type, id) {
+  const url = (type === 'task')
+    ? `/developers/api/assignments/accept-task/${id}/`
+    : `/developers/api/assignments/accept-project/${id}/`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) throw new Error('Ошибка сервера');
+    const data = await response.json();
+    if (data.success) {
+      const item = document.querySelector(`.assignment-item[data-type="${type}"][data-id="${id}"]`);
+      if (item) {
+        updateStatusBadge(item, 'accepted');
+        removeActionButtons(item);
+        item.dataset.status = 'accepted';
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Не удалось выполнить действие');
+  }
+}
+
+async function rejectAssignment(type, id) {
+  const url = (type === 'task')
+    ? `/developers/api/assignments/reject-task/${id}/`
+    : `/developers/api/assignments/reject-project/${id}/`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) throw new Error('Ошибка сервера');
+    const data = await response.json();
+    if (data.success) {
+      const item = document.querySelector(`.assignment-item[data-type="${type}"][data-id="${id}"]`);
+      if (item) {
+        updateStatusBadge(item, 'rejected');
+        removeActionButtons(item);
+        item.dataset.status = 'rejected';
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Не удалось выполнить действие');
+  }
+}
+</script>
+
+<style>
+.status-badge { padding: 0.2rem 0.8rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 500; }
+.status-pending { background: #ffedd5; color: #b45309; }
+.status-accepted { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}

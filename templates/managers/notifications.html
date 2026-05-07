@@ -1,0 +1,15 @@
+{% extends 'managers/manager_base.html' %}
+{% block content %}
+<h2>Уведомления</h2>
+<div class="card">
+    {% for notification in notifications %}
+        <div style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+            <strong>{{ notification.title }}</strong> ({{ notification.type }})
+            <p>{{ notification.message }}</p>
+            <small>{{ notification.created_at }}</small>
+        </div>
+    {% empty %}
+        <p>Нет уведомлений</p>
+    {% endfor %}
+</div>
+{% endblock %}

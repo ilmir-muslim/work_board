@@ -1,0 +1,25 @@
+{% extends 'managers/manager_base.html' %}
+{% block content %}
+<h2>Все назначенные задачи</h2>
+<a href="{% url 'managers:assigned_task_create' %}" class="btn btn-primary">➕ Назначить новую</a>
+<div class="card">
+    <table>
+        <thead>
+            <tr><th>Название</th><th>Исполнитель</th><th>Проект</th><th>Статус</th><th>Создана</th></tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td><a href="{% url 'managers:assigned_task_detail' task.id %}">{{ task.title }}</a></td>
+                <td>{{ task.assignee.username }}</td>
+                <td>{{ task.project }}</td>
+                <td><span class="status-{{ task.status }}">{{ task.get_status_display }}</span></td>
+                <td>{{ task.created_at|date:"d.m.Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">Нет назначенных задач</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'managers/manager_base.html' %}
+{% block content %}
+<h2>👥 Разработчики</h2>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Email</th>
+        <th>Ставка</th>
+        <th>Активных задач</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dev in developers %}
+      <tr>
+        <td><strong>{{ dev.username }}</strong></td>
+        <td>{{ dev.email|default:"—" }}</td>
+        <td>{{ dev.default_hourly_rate }} ₽/ч</td>
+        <td>{{ dev.owned_tasks.count }}</td>
+        <td style="display:flex; gap:0.5rem;">
+          <a href="{% url 'managers:developer_projects' dev.id %}" class="btn btn-sm">📁 Проекты</a>
+          <button onclick="openCreateTaskModal({{ dev.id }})" class="btn btn-sm btn-primary">➕ Задача</button>
+          <button onclick="openCreateProjectModal({{ dev.id }})" class="btn btn-sm">📁 Новый проект</button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">Нет разработчиков</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Модальное окно: Создать задачу -->
+<div id="taskModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>➕ Новая задача</h3>
+    <input type="hidden" id="taskAssigneeId">
+    <input type="text" id="taskTitle" class="form-control" placeholder="Название задачи" required>
+    <textarea id="taskDescription" class="form-control" placeholder="Описание" rows="3"></textarea>
+    <select id="taskProject" class="form-control">
+      <option value="">Без проекта</option>
+    </select>
+    <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+      <button onclick="createTask()" class="btn btn-primary">Создать</button>
+      <button onclick="closeModal('taskModal')" class="btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно: Создать проект -->
+<div id="projectModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>📁 Новый проект</h3>
+    <input type="hidden" id="projectAssigneeId">
+    <input type="text" id="projectName" class="form-control" placeholder="Название проекта" required>
+    <input type="number" id="projectRate" class="form-control" placeholder="Ставка (₽/ч)" step="0.01" min="0">
+    <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+      <button onclick="createProject()" class="btn btn-primary">Создать</button>
+      <button onclick="closeModal('projectModal')" class="btn">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  async function loadProjectsForUser(userId) {
+    // Загружаем проекты разработчика для выпадающего списка
+    const select = document.getElementById('taskProject');
+    select.innerHTML = '<option value="">Без проекта</option>';
+    try {
+      const res = await fetch(`/managers/api/user-projects/${userId}/`);
+      const projects = await res.json();
+      projects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    } catch(e) { console.error(e); }
+  }
+
+  async function openCreateTaskModal(userId) {
+    document.getElementById('taskAssigneeId').value = userId;
+    await loadProjectsForUser(userId);
+    openModal('taskModal');
+  }
+
+  async function openCreateProjectModal(userId) {
+    document.getElementById('projectAssigneeId').value = userId;
+    openModal('projectModal');
+  }
+
+  async function createTask() {
+    const assigneeId = document.getElementById('taskAssigneeId').value;
+    const title = document.getElementById('taskTitle').value.trim();
+    const description = document.getElementById('taskDescription').value.trim();
+    const projectId = document.getElementById('taskProject').value || null;
+
+    if (!title) return alert('Введите название задачи');
+
+    try {
+      const res = await fetch('/managers/api/tasks/create/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ assignee_id: assigneeId, title, description, project_id: projectId })
+      });
+      if (res.ok) {
+        closeModal('taskModal');
+        location.reload();
+      } else {
+        const err = await res.json();
+        alert('Ошибка: ' + (err.error || 'неизвестно'));
+      }
+    } catch(e) { alert('Ошибка сети'); }
+  }
+
+  async function createProject() {
+    const assigneeId = document.getElementById('projectAssigneeId').value;
+    const name = document.getElementById('projectName').value.trim();
+    const rate = document.getElementById('projectRate').value || 0;
+
+    if (!name) return alert('Введите название проекта');
+
+    try {
+      const res = await fetch('/managers/api/projects/create/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ assignee_id: assigneeId, name, hourly_rate: rate })
+      });
+      if (res.ok) {
+        closeModal('projectModal');
+        location.reload();
+      } else {
+        const err = await res.json();
+        alert('Ошибка: ' + (err.error || 'неизвестно'));
+      }
+    } catch(e) { alert('Ошибка сети'); }
+  }
+</script>
+{% endblock %}
