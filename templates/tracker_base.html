@@ -194,6 +194,15 @@
     .bar-fill { height: 100%; background: linear-gradient(90deg, #7c6fe0, #a89bf0); border-radius: 8px; transition: width 0.4s; }
     .day-value { width: 40px; font-size: 0.8rem; text-align: right; color: #475569; }
 
+    .badge {
+      background: #7c6fe0;
+      color: white;
+      padding: 0.1rem 0.6rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      margin-left: 0.3rem;
+    }
+
     @media (max-width: 1100px) {
       .content-area { grid-template-columns: 1fr; }
       .left-column { order: 1; }
@@ -211,7 +220,12 @@
       <div class="nav" style="margin-bottom: 0;">
         <a href="{% url 'developers:project_list' %}" class="btn">📁 Проекты</a>
         <a href="{% url 'developers:daily_tasks' %}" class="btn">📅 Ежедневные</a>
-        <a href="{% url 'developers:my_assignments' %}" class="btn">📥 Назначения</a>
+        <a href="{% url 'developers:my_assignments' %}" class="btn">
+          📥 Назначения
+          {% if pending_assignments_count %}
+            <span class="badge">{{ pending_assignments_count }}</span>
+          {% endif %}
+        </a>
         <form method="post" action="{% url 'users:logout' %}" style="display:inline;">
           {% csrf_token %}
           <button type="submit" class="btn btn-logout">Выйти</button>

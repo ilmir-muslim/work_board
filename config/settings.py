@@ -55,6 +55,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.earnings_summary",
                 "core.context_processors.daily_stats",
+                "core.context_processors.pending_assignments_count",
             ],
         },
     },

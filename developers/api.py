@@ -416,22 +416,21 @@ def api_reject_assigned_task(request, task_id):
 @login_required
 @require_POST
 def api_accept_project_assignment(request, assignment_id):
-    assignment = get_object_or_404(ProjectAssignment, pk=assignment_id, user=request.user)
-    if assignment.status != 'pending':
-        return JsonResponse({'error': 'Уже обработано'}, status=400)
-    # Создаём проект у разработчика, перенося данные из временного проекта
-    temp_project = assignment.project
-    real_project = Project.objects.create(
-        name=temp_project.name,
-        owner=request.user,
-        hourly_rate=temp_project.hourly_rate
+    assignment = get_object_or_404(
+        ProjectAssignment, pk=assignment_id, user=request.user
     )
-    assignment.status = 'accepted'
+    if assignment.status != "pending":
+        return JsonResponse({"error": "Уже обработано"}, status=400)
+
+    # Передаём временный проект разработчику (меняем владельца)
+    project = assignment.project
+    project.owner = request.user
+    project.save()
+
+    assignment.status = "accepted"
     assignment.accepted_at = timezone.now()
     assignment.save()
-    # Удаляем временный проект или оставляем, но меняем владельца – лучше удалить
-    temp_project.delete()
-    return JsonResponse({'success': True, 'project_id': real_project.id})
+    return JsonResponse({"success": True, "project_id": project.id})
 
 
 @login_required

@@ -46,6 +46,22 @@
       <span class="stat-label">Выполнено подзадач</span>
     </div>
   </div>
+
+  <!-- Прикреплённые файлы из назначения проекта -->
+  {% with assignment_files=project.assignments.all %}
+  {% if assignment_files %}
+    <div class="assignment-files" style="margin-top: 1rem; background: rgba(255,255,255,0.15); border-radius: 1rem; padding: 1rem;">
+      <h4 style="color: white;">📎 Файлы назначения:</h4>
+      <ul style="color: white; list-style: none; padding-left: 0;">
+        {% for assignment in assignment_files %}
+          {% for att in assignment.attachments.all %}
+            <li><a href="{{ att.file.url }}" target="_blank" style="color: #ffd966;">{{ att.original_filename }}</a></li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+  {% endwith %}
 </div>
 
 <!-- Единая форма добавления задачи -->
@@ -179,7 +195,7 @@
   // Функция фильтрации задач
   function filterTasks(filter) {
     document.querySelectorAll('#tasksList .task-item').forEach(item => {
-      const completed = item.dataset.completed === 'true';  // изменено на строчную 'true'
+      const completed = item.dataset.completed === 'true';  // строчная 'true'
       item.style.display =
         filter === 'all' || (filter === 'active' && !completed) || (filter === 'completed' && completed)
           ? ''

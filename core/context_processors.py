@@ -1,6 +1,7 @@
 from developers.models import DailyWorkSession, Project
 from django.utils import timezone
 from datetime import timedelta
+from managers.models import AssignedTask, ProjectAssignment
 
 
 def earnings_summary(request):
@@ -51,7 +52,6 @@ def daily_stats(request):
     max_week_seconds = max((d["total_seconds"] for d in week_data), default=0)
     week_total = sum(d["total_seconds"] for d in week_data)
 
-    # Форматирование времени в ЧЧ:ММ:СС
     def fmt(sec):
         h, rem = divmod(int(sec), 3600)
         m, s = divmod(rem, 60)
@@ -66,3 +66,14 @@ def daily_stats(request):
         "week_total_formatted": fmt(week_total),
         "max_week_seconds": max_week_seconds,
     }
+
+
+def pending_assignments_count(request):
+    """Количество непринятых назначенных задач и проектов для пользователя."""
+    if not request.user.is_authenticated:
+        return {}
+    count = (
+        AssignedTask.objects.filter(assignee=request.user, status="pending").count()
+        + ProjectAssignment.objects.filter(user=request.user, status="pending").count()
+    )
+    return {"pending_assignments_count": count}
