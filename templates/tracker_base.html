@@ -216,7 +216,10 @@
   <div class="container">
     {% if user.is_authenticated %}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-      <span>👤 {{ user.username }} | 💰 {{ user.default_hourly_rate }} ₽/ч</span>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <span>👤 {{ user.username }} | 💰 {{ user.default_hourly_rate }} ₽/ч</span>
+        <span id="server-status" style="padding: 0.2rem 0.8rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 600; background: #d1fae5; color: #065f46; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">🟢 Онлайн</span>
+      </div>
       <div class="nav" style="margin-bottom: 0;">
         <a href="{% url 'developers:project_list' %}" class="btn">📁 Проекты</a>
         <a href="{% url 'developers:daily_tasks' %}" class="btn">📅 Ежедневные</a>
@@ -267,6 +270,29 @@
         body: 'default_hourly_rate=' + rate
       }).then(res => { if (res.ok) location.reload(); });
     }
+
+    // Пинг сервера для проверки статуса (каждые 5 секунд)
+  setInterval(async () => {
+    const statusEl = document.getElementById('server-status');
+    if (!statusEl) return;
+    
+    try {
+      // Отправляем легковесный HEAD-запрос (без скачивания тела страницы)
+      const response = await fetch('/', { method: 'HEAD', cache: 'no-cache' });
+      if (response.ok || response.status === 302) {
+        statusEl.innerHTML = '🟢 Онлайн';
+        statusEl.style.background = '#d1fae5';
+        statusEl.style.color = '#065f46';
+      } else {
+        throw new Error('Server returned an error');
+      }
+    } catch (error) {
+      // Если контейнер остановлен (fetch выдаст Network Error)
+      statusEl.innerHTML = '🔴 Офлайн (Остановлен)';
+      statusEl.style.background = '#fee2e2';
+      statusEl.style.color = '#991b1b';
+    }
+  }, 5000);
   </script>
   <script src="{% static 'js/developer.js' %}"></script>
   {% block extra_js %}{% endblock %}
