@@ -6,11 +6,12 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      # 5. Кэш для весов Whisper
+      - /staticfiles
       - whisper_cache:/root/.cache/whisper
     environment:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=config.settings
+      - STATIC_ROOT=/staticfiles
 
 # Объявляем именованный том
 volumes:
