@@ -7,6 +7,7 @@ from datetime import timedelta
 from managers.models import AssignedTask, ProjectAssignment
 
 from .models import (
+    AudioChunk,
     Project,
     Task,
     SubTask,
@@ -21,7 +22,7 @@ from .forms import ProjectForm, TaskForm, SubTaskForm, CommentForm
 @login_required
 def project_list(request):
     """Список проектов текущего пользователя."""
-    projects = Project.objects.filter(owner=request.user)
+    projects = Project.objects.filter(owner=request.user).order_by("-created_at")
     return render(request, "developers/project_list.html", {"projects": projects})
 
 
@@ -581,3 +582,18 @@ def reject_project_assignment(request, assignment_id):
         assignment.status = "rejected"
         assignment.save()
     return redirect("developers:my_assignments")
+
+
+@login_required
+def audio_to_text_page(request):
+    # Очищаем зависшие временные файлы с прошлых сессий
+    old_chunks = AudioChunk.objects.filter(user=request.user)
+    for chunk in old_chunks:
+        if chunk.file and hasattr(chunk.file, "path"):
+            import os
+
+            if os.path.exists(chunk.file.path):
+                os.remove(chunk.file.path)
+    old_chunks.delete()
+
+    return render(request, "developers/audio_to_text.html")

@@ -779,5 +779,82 @@ window.pauseTimer = async function (taskId) {
     refreshLiveStatsNow();
 };
 
+// Редактирование времени задачи (по двойному клику)
+async function editTaskTime(taskId, element) {
+    const currentTimeStr = element.textContent.trim();
+    const newTimeStr = prompt('Корректировка времени задачи\nВведите новое время в формате ЧЧ:ММ:СС :', currentTimeStr);
+
+    // Если отменили или ничего не изменили
+    if (!newTimeStr || newTimeStr === currentTimeStr) return;
+
+    // Переводим ЧЧ:ММ:СС в секунды
+    const parts = newTimeStr.split(':');
+    if (parts.length !== 3) {
+        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
+        return;
+    }
+
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    const totalSeconds = (h * 3600) + (m * 60) + s;
+
+    try {
+        const response = await fetch(`/developers/api/tasks/${taskId}/update/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ total_time: totalSeconds })
+        });
+
+        if (response.ok) {
+            location.reload(); // Перезагружаем страницу, чтобы все счетчики обновились
+        } else {
+            alert('Ошибка при сохранении времени');
+        }
+    } catch (e) {
+        alert('Ошибка сети при сохранении');
+    }
+}
+
+// Редактирование дневной сессии (виджет "Сегодня")
+async function editDailySessionTime(element) {
+    const currentTimeStr = element.textContent.trim();
+    const newTimeStr = prompt('Корректировка времени за СЕГОДНЯ\nВведите новое время в формате ЧЧ:ММ:СС :', currentTimeStr);
+
+    if (!newTimeStr || newTimeStr === currentTimeStr) return;
+
+    const parts = newTimeStr.split(':');
+    if (parts.length !== 3) {
+        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
+        return;
+    }
+
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    const totalSeconds = (h * 3600) + (m * 60) + s;
+
+    try {
+        const response = await fetch(`/developers/api/daily-session/update/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ total_time: totalSeconds })
+        });
+
+        if (response.ok) {
+            // Если мы находимся на странице, где есть живое обновление, можно просто обновить данные
+            if (typeof refreshLiveStatsNow === 'function') {
+                refreshLiveStatsNow();
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Ошибка при сохранении дневного времени');
+        }
+    } catch (e) {
+        alert('Ошибка сети при сохранении');
+    }
+}
+
 // Запуск инициализации после готовности DOM
 document.addEventListener('DOMContentLoaded', initLiveStats);

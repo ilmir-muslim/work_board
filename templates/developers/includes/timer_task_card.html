@@ -14,7 +14,10 @@
     </span>
     
     <div class="time-display current-time" 
-        data-initial-seconds="{{ task.total_time_with_current|floatformat:0 }}">
+        data-initial-seconds="{{ task.total_time_with_current|floatformat:0 }}"
+        ondblclick="editTaskTime({{ task.id }}, this)" 
+        style="cursor: pointer;" 
+        title="Двойной клик для ручной корректировки времени">
       {{ task.formatted_total_time_with_current }}
     </div>
 

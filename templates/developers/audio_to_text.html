@@ -1,0 +1,185 @@
+{% extends 'tracker_base_with_columns.html' %}
+{% block title %}Сборщик ТЗ{% endblock %}
+
+{% block main_content %}
+<h1>🎙️ Конвертер кружочков и голосовых в ТЗ</h1>
+<div class="card">
+    <p>Добавляй медиафайлы по порядку. Они склеятся в один поток, будут переведены в текст, и ты получишь готовый .txt файл.</p>
+    
+    <!-- Зона Drag & Drop -->
+    <div id="dropZone" style="border: 2px dashed #7c6fe0; border-radius: 1.2rem; padding: 2.5rem 1rem; text-align: center; background: #faf9ff; cursor: pointer; transition: all 0.2s ease; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📥</div>
+        <div style="font-size: 1.1rem; color: #2d2b55; font-weight: 600;">Перетащи файлы сюда</div>
+        <div style="color: #64748b; font-size: 0.9rem; margin-top: 0.3rem;">или нажми, чтобы выбрать (mp4, mp3, ogg, m4a)</div>
+        <input type="file" id="mediaInput" multiple accept="audio/*,video/mp4" style="display: none;">
+    </div>
+
+    <div id="fileQueue" style="margin-bottom: 1.5rem;">
+        <!-- Здесь будут появляться загруженные файлы -->
+    </div>
+
+    <button id="processBtn" onclick="processFiles()" class="btn btn-primary" style="display:none; width: 100%;">
+        Скомпоновать и скачать текст
+    </button>
+    <div id="loadingStatus" style="margin-top: 1rem; color: #7c6fe0; font-weight: bold; display: none; text-align: center;">
+        ⏳ Обработка аудио и распознавание текста...<br>
+        <span style="font-size: 0.9rem; font-weight: normal;">(Может занять несколько минут в зависимости от длины аудио)</span>
+    </div>
+</div>
+
+<script>
+    let currentOrder = 0;
+    let pendingUploads = 0;
+
+    const dropZone = document.getElementById('dropZone');
+    const mediaInput = document.getElementById('mediaInput');
+
+    // Клик по зоне открывает системное окно выбора файлов
+    dropZone.addEventListener('click', () => mediaInput.click());
+
+    // Выбор файлов через системное окно
+    mediaInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+
+    // Визуальные эффекты при перетаскивании файла над зоной
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '#ece6f7';
+        dropZone.style.borderColor = '#5b4bd5';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '#faf9ff';
+        dropZone.style.borderColor = '#7c6fe0';
+    });
+
+    // Событие отпускания файлов в зону
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '#faf9ff';
+        dropZone.style.borderColor = '#7c6fe0';
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+        }
+    });
+
+    // Универсальная функция обработки файлов (и для drag&drop, и для клика)
+    function handleFiles(filesList) {
+        const files = Array.from(filesList);
+        if (files.length === 0) return;
+
+        const queueContainer = document.getElementById('fileQueue');
+        document.getElementById('processBtn').style.display = 'block';
+
+        files.forEach(file => {
+            // Создаем красивую плашку для файла
+            const fileItem = document.createElement('div');
+            fileItem.style.cssText = "padding: 0.7rem 1rem; background: #ffffff; border: 1px solid #e2daf5; border-radius: 0.8rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);";
+            
+            fileItem.innerHTML = `
+                <strong>${currentOrder + 1}.</strong> 
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</span> 
+                <span class="status" style="font-size: 0.85rem; color: #64748b;">(Загрузка...)</span>
+            `;
+            queueContainer.appendChild(fileItem);
+
+            // Сразу отправляем на сервер
+            uploadChunk(file, currentOrder, fileItem);
+            currentOrder++;
+            pendingUploads++;
+        });
+        
+        // Очищаем инпут, чтобы можно было закинуть те же файлы повторно при необходимости
+        mediaInput.value = ''; 
+    }
+
+    async function uploadChunk(file, order, uiElement) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('order', order);
+        
+        const statusSpan = uiElement.querySelector('.status');
+
+        try {
+            const response = await fetch('{% url "developers:api_upload_audio_chunk" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            });
+            if (response.ok) {
+                statusSpan.textContent = '✅ Ожидает сборки';
+                statusSpan.style.color = '#10b981'; // Зеленый цвет успеха
+                pendingUploads--;
+            } else {
+                throw new Error('Ошибка сервера');
+            }
+        } catch (e) {
+            statusSpan.textContent = '❌ Ошибка';
+            statusSpan.style.color = '#ef4444'; // Красный цвет ошибки
+            pendingUploads--;
+        }
+    }
+
+async function processFiles() {
+        if (pendingUploads > 0) {
+            alert('Пожалуйста, дождитесь окончания загрузки всех файлов на сервер!');
+            return;
+        }
+
+        document.getElementById('processBtn').style.display = 'none';
+        
+        const statusEl = document.getElementById('loadingStatus');
+        statusEl.style.display = 'block';
+        statusEl.style.color = '#7c6fe0';
+        statusEl.innerHTML = '⏳ Обработка аудио и распознавание текста...<br><span style="font-size: 0.9rem; font-weight: normal;">(Может занять несколько минут в зависимости от длины аудио)</span>';
+
+        let isSuccess = false;
+
+        try {
+            const response = await fetch('{% url "developers:api_process_audio_chunks" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                // Генерируем .txt файл на лету прямо в браузере
+                const blob = new Blob([data.text], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'tz_draft.txt';
+                a.click();
+                
+                // Сбрасываем очередь
+                document.getElementById('fileQueue').innerHTML = '';
+                currentOrder = 0;
+                isSuccess = true;
+            } else {
+                alert('Ошибка обработки: ' + (data.error || 'неизвестно'));
+                document.getElementById('processBtn').style.display = 'block';
+            }
+        } catch (e) {
+            alert('Сбой сети при обработке файлов.');
+            document.getElementById('processBtn').style.display = 'block';
+        } finally {
+            if (isSuccess) {
+                // Показываем сообщение об успехе
+                statusEl.innerHTML = '✅ Файл успешно скачался!';
+                statusEl.style.color = '#10b981'; // Зеленый цвет
+                
+                // Прячем сообщение через 5 секунд
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            } else {
+                // Если была ошибка, просто прячем статус
+                statusEl.style.display = 'none';
+            }
+        }
+    }
+</script>
+{% endblock %}

@@ -1,6 +1,9 @@
 <div class="card daily-stats-widget" id="dailyStatsWidget">
   <h3>📊 Сегодня</h3>
-  <div class="today-time" id="todayTime">{{ current_daily_formatted }}</div>
+  <div class="today-time" id="todayTime" 
+     ondblclick="editDailySessionTime(this)" 
+     style="cursor: pointer;" 
+     title="Двойной клик для ручной корректировки времени за сегодня">{{ current_daily_formatted }}</div>
   <h4 style="margin-top:1rem;">Неделя</h4>
   <div class="week-bars" id="weekBars"></div>
   <div style="margin-top:0.5rem; font-weight:600;" id="weekTotal">

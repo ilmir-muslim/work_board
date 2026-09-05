@@ -1,3 +1,6 @@
 Django==5.2.14
 gunicorn==22.0.0
 whitenoise==6.7.0
+pyside6
+pydub==0.25.1
+openai-whisper==20250625

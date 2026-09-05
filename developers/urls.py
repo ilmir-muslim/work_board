@@ -5,6 +5,7 @@ from developers.api import (
     api_create_project,
     api_daily_stats_widget,
     api_earnings_widget,
+    api_process_audio_chunks,
     api_reject_assigned_task,
     api_reject_project_assignment,
     api_start_timer,
@@ -13,6 +14,7 @@ from developers.api import (
     api_create_task,
     api_get_task_current_time,
     api_delete_task,
+    api_update_daily_session,
     api_update_task,
     api_create_subtask,
     api_update_subtask,
@@ -24,6 +26,7 @@ from developers.api import (
     api_update_project,
     api_delete_project,
     api_transfer_previous_week_tasks,
+    api_upload_audio_chunk,
 )
 from . import views
 
@@ -192,5 +195,19 @@ urlpatterns = [
         "api/assignments/reject-project/<int:assignment_id>/",
         api_reject_project_assignment,
         name="api_reject_project_assignment",
+    ),
+    path("tools/audio-to-text/", views.audio_to_text_page, name="audio_to_text"),
+    path(
+        "api/tools/upload-chunk/", api_upload_audio_chunk, name="api_upload_audio_chunk"
+    ),
+    path(
+        "api/tools/process-audio/",
+        api_process_audio_chunks,
+        name="api_process_audio_chunks",
+    ),
+    path(
+        "api/daily-session/update/",
+        api_update_daily_session,
+        name="api_update_daily_session",
     ),
 ]

@@ -5,7 +5,13 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app            # монтируем весь проект, db.sqlite3 остаётся на хосте
+      - .:/app
+      # 5. Кэш для весов Whisper
+      - whisper_cache:/root/.cache/whisper
     environment:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=config.settings
+
+# Объявляем именованный том
+volumes:
+  whisper_cache:

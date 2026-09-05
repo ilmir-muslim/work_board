@@ -1,5 +1,10 @@
+import os
 import json
+import uuid
+import whisper
+from pydub import AudioSegment
 from datetime import timedelta
+from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
@@ -7,6 +12,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 
 from managers.models import AssignedTask, ProjectAssignment
+from .models import AudioChunk
 from .models import (
     DailyWorkSession,
     Project,
@@ -199,6 +205,12 @@ def api_update_task(request, task_id):
         task.priority = data["priority"]
     if "due_date" in data:
         task.due_date = data["due_date"] if data["due_date"] else None
+
+    if "total_time" in data:
+        task.total_time = float(data["total_time"])
+        if task.is_timer_running:
+            task.last_start_time = timezone.now()
+
     task.save()
     return JsonResponse({"success": True})
 
@@ -443,4 +455,84 @@ def api_reject_project_assignment(request, assignment_id):
         return JsonResponse({"error": "Назначение уже обработано"}, status=400)
     assignment.status = "rejected"
     assignment.save()
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_POST
+def api_upload_audio_chunk(request):
+    """Сохраняет загруженный кусок аудио/видео."""
+    file = request.FILES.get("file")
+    order = int(request.POST.get("order", 0))
+    if file:
+        AudioChunk.objects.create(user=request.user, file=file, order=order)
+        return JsonResponse({"success": True})
+    return JsonResponse({"error": "Файл не найден"}, status=400)
+
+
+@login_required
+@require_POST
+def api_process_audio_chunks(request):
+    """Склеивает файлы, переводит в текст и удаляет временные данные."""
+    chunks = AudioChunk.objects.filter(user=request.user)
+    if not chunks.exists():
+        return JsonResponse({"error": "Нет загруженных файлов"}, status=400)
+
+    combined = AudioSegment.empty()
+    for chunk in chunks:
+        # pydub автоматически извлечет аудио из mp4, ogg, mp3
+        try:
+            audio = AudioSegment.from_file(chunk.file.path)
+            combined += audio
+        except Exception as e:
+            print(f"Ошибка чтения файла {chunk.file.path}: {e}")
+
+    # Экспортируем во временный mp3
+    temp_filename = f"temp_combined_{uuid.uuid4().hex}.mp3"
+    temp_path = os.path.join(settings.MEDIA_ROOT, temp_filename)
+
+    # Создаем папку media, если ее нет
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    combined.export(temp_path, format="mp3")
+
+    text_result = ""
+    try:
+        # Используем модель base (компромисс между скоростью, памятью и качеством)
+        model = whisper.load_model("base")
+        result = model.transcribe(temp_path, language="ru", fp16=False)
+        text_result = result["text"]
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    finally:
+        # Зачищаем следы
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        for chunk in chunks:
+            if os.path.exists(chunk.file.path):
+                os.remove(chunk.file.path)
+            chunk.delete()
+
+    return JsonResponse({"success": True, "text": text_result})
+
+
+@login_required
+@require_POST
+def api_update_daily_session(request):
+    """Ручная корректировка времени за сегодня."""
+    data = json.loads(request.body)
+    if "total_time" not in data:
+        return JsonResponse({"error": "total_time required"}, status=400)
+
+    today = timezone.now().date()
+    session, created = DailyWorkSession.objects.get_or_create(
+        user=request.user, date=today
+    )
+
+    session.total_time = float(data["total_time"])
+
+    # Если глобальный таймер сегодня запущен, сбрасываем стартовую точку
+    if session.is_timer_running:
+        session.last_start_time = timezone.now()
+
+    session.save()
     return JsonResponse({"success": True})

@@ -182,3 +182,15 @@ class DailyWorkSession(models.Model):
         if self.is_timer_running and self.last_start_time:
             t += (timezone.now() - self.last_start_time).total_seconds()
         return t
+
+
+class AudioChunk(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="audio_chunks"
+    )
+    file = models.FileField(upload_to="temp_audio/")
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "created_at"]
