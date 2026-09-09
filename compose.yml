@@ -3,7 +3,7 @@ services:
     build: .
     container_name: work_board
     ports:
-      - "8000:8000"
+      - "8009:8000"
     volumes:
       - .:/app
       - /staticfiles

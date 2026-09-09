@@ -704,12 +704,50 @@ function applyDailyStats(data) {
     }
 }
 
-// Запуск локального секундомера (каждую секунду увеличиваем dailySeconds)
+// --- Функция вывода системных уведомлений из браузера ---
+function showRestNotification() {
+    const title = "WorkBoard 🍅";
+    const options = {
+        body: "Прошло 25 минут! Пора сделать небольшой перерыв.",
+        icon: "/media/ico_png.png"
+    };
+
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+        new Notification(title, options);
+    } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification(title, options);
+            }
+        });
+    }
+}
+
+// Запуск локального секундомера
 function startLocalDailyTicker() {
     if (dailyTimerInterval) return;
     dailyTimerInterval = setInterval(() => {
         dailySeconds++;
         document.getElementById('todayTime').textContent = formatTimeColon(dailySeconds);
+
+        // Логика Pomodoro (25 минут = 1500 секунд)
+        let start = localStorage.getItem('pomodoroStart');
+        if (!start) {
+            start = Date.now();
+            localStorage.setItem('pomodoroStart', start);
+            localStorage.setItem('pomodoroNotified', 'false');
+        }
+
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const notified = localStorage.getItem('pomodoroNotified') === 'true';
+
+        // Если прошло 25 минут (1500 сек) и мы еще не уведомляли
+        if (elapsed >= 25 * 60 && !notified) {
+            showRestNotification();
+            localStorage.setItem('pomodoroNotified', 'true');
+        }
     }, 1000);
 }
 
@@ -717,6 +755,10 @@ function startLocalDailyTicker() {
 function stopLocalDailyTicker() {
     clearInterval(dailyTimerInterval);
     dailyTimerInterval = null;
+
+    // Сбрасываем таймер отдыха при любой паузе/остановке задач
+    localStorage.removeItem('pomodoroStart');
+    localStorage.removeItem('pomodoroNotified');
 }
 
 // Запрос данных дневной статистики
@@ -781,13 +823,15 @@ window.pauseTimer = async function (taskId) {
 
 // Редактирование времени задачи (по двойному клику)
 async function editTaskTime(taskId, element) {
-    const currentTimeStr = element.textContent.trim();
-    const newTimeStr = prompt('Корректировка времени задачи\nВведите новое время в формате ЧЧ:ММ:СС :', currentTimeStr);
+    // Берем сырые секунды из атрибута и форматируем в ЧЧ:ММ:СС
+    const seconds = parseFloat(element.getAttribute('data-seconds') || element.getAttribute('data-initial-seconds') || 0);
+    const defaultTime = formatTimeColon(seconds);
+
+    const newTimeStr = prompt('Корректировка времени задачи\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
 
     // Если отменили или ничего не изменили
-    if (!newTimeStr || newTimeStr === currentTimeStr) return;
+    if (!newTimeStr || newTimeStr === defaultTime) return;
 
-    // Переводим ЧЧ:ММ:СС в секунды
     const parts = newTimeStr.split(':');
     if (parts.length !== 3) {
         alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
@@ -807,7 +851,7 @@ async function editTaskTime(taskId, element) {
         });
 
         if (response.ok) {
-            location.reload(); // Перезагружаем страницу, чтобы все счетчики обновились
+            location.reload();
         } else {
             alert('Ошибка при сохранении времени');
         }
@@ -818,10 +862,11 @@ async function editTaskTime(taskId, element) {
 
 // Редактирование дневной сессии (виджет "Сегодня")
 async function editDailySessionTime(element) {
-    const currentTimeStr = element.textContent.trim();
-    const newTimeStr = prompt('Корректировка времени за СЕГОДНЯ\nВведите новое время в формате ЧЧ:ММ:СС :', currentTimeStr);
+    // Берем глобальную переменную секунд и форматируем в ЧЧ:ММ:СС
+    const defaultTime = formatTimeColon(dailySeconds);
+    const newTimeStr = prompt('Корректировка времени за СЕГОДНЯ\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
 
-    if (!newTimeStr || newTimeStr === currentTimeStr) return;
+    if (!newTimeStr || newTimeStr === defaultTime) return;
 
     const parts = newTimeStr.split(':');
     if (parts.length !== 3) {
@@ -842,7 +887,6 @@ async function editDailySessionTime(element) {
         });
 
         if (response.ok) {
-            // Если мы находимся на странице, где есть живое обновление, можно просто обновить данные
             if (typeof refreshLiveStatsNow === 'function') {
                 refreshLiveStatsNow();
             } else {
@@ -857,4 +901,11 @@ async function editDailySessionTime(element) {
 }
 
 // Запуск инициализации после готовности DOM
-document.addEventListener('DOMContentLoaded', initLiveStats);
+document.addEventListener('DOMContentLoaded', () => {
+    initLiveStats();
+
+    // Запрашиваем права на уведомления при первом запуске
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+});
