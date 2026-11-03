@@ -309,6 +309,9 @@ def api_update_project(request, project_id):
         if isinstance(raw, str):
             raw = raw.replace("₽/ч", "").replace("₽", "").replace("/ч", "").strip()
         project.hourly_rate = float(raw)
+
+    if "add_payment" in data:
+        project.paid_amount += float(data["add_payment"])
     project.save()
     return JsonResponse({"success": True})
 

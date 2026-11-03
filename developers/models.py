@@ -12,6 +12,7 @@ class Project(models.Model):
         verbose_name="Владелец",
     )
     hourly_rate = models.FloatField(default=0.0, verbose_name="Часовая ставка")
+    paid_amount = models.FloatField(default=0.0, verbose_name='Оплачено')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
 
     class Meta:
@@ -42,6 +43,28 @@ class Project(models.Model):
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
+    @property
+    def remaining_amount(self):
+        """Остаток к оплате"""
+        # Округляем до 2 знаков перед вычитанием
+        earned = round(self.earned_amount, 2)
+        paid = round(self.paid_amount, 2)
+        return max(0.0, earned - paid)
+
+    @property
+    def payment_status(self):
+        """Определяет статус для бейджиков"""
+        # Округляем до 2 знаков перед сравнением
+        earned = round(self.earned_amount, 2)
+        paid = round(self.paid_amount, 2)
+        
+        if earned <= 0:
+            return "unpaid"
+        if paid >= earned:
+            return "paid"
+        if paid > 0:
+            return "partial"
+        return "unpaid"
 
 class Task(models.Model):
     title = models.CharField(max_length=255, verbose_name="Название")

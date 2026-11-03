@@ -12,6 +12,7 @@ services:
       - DEBUG=True
       - DJANGO_SETTINGS_MODULE=config.settings
       - STATIC_ROOT=/staticfiles
+      - CUDA_VISIBLE_DEVICES=-1
 
 # Объявляем именованный том
 volumes:

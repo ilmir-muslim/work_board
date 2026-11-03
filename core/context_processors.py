@@ -10,6 +10,10 @@ def earnings_summary(request):
     user = request.user
     projects = Project.objects.filter(owner=user)
     total_earned = sum(p.earned_amount for p in projects)
+    total_remaining = sum(
+        p.remaining_amount for p in projects
+    )  # ДОБАВЛЕНА СУММА К ОПЛАТЕ
+
     now = timezone.now()
     months_since = (now.year - user.date_joined.year) * 12 + (
         now.month - user.date_joined.month
@@ -17,6 +21,7 @@ def earnings_summary(request):
     average_monthly = total_earned / months_since
     return {
         "total_earned": total_earned,
+        "total_remaining": total_remaining,
         "average_monthly": average_monthly,
         "months_since": months_since,
     }

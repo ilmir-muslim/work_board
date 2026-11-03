@@ -1,23 +1,31 @@
 // static/js/developer.js
 
-// Глобальная переменная CSRF-токена доступна из шаблона tracker_base.html
-
-// ---------------------------------------------------------------
-//  Инициализация начальных отображений времени
-// ---------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
     initializeTimerDisplays();
+    initLiveStats();
+
+    // Запрашиваем права на уведомления для Pomodoro
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    // Восстанавливаем фильтры из памяти
+    const savedTaskFilter = localStorage.getItem('savedTaskFilter');
+    if (savedTaskFilter && document.getElementById(`filter-${savedTaskFilter}`)) {
+        if (typeof filterTasks === 'function') filterTasks(savedTaskFilter);
+    }
+
+    const savedProjectFilter = localStorage.getItem('savedProjectFilter');
+    if (savedProjectFilter && document.getElementById(`filter-${savedProjectFilter}`)) {
+        if (typeof filterProjects === 'function') filterProjects(savedProjectFilter);
+    }
 });
 
-/**
- * Преобразует все элементы с data-initial-seconds в форматированное время
- * и устанавливает data-seconds для дальнейшего динамического пересчёта.
- */
 function initializeTimerDisplays() {
     document.querySelectorAll('.current-time').forEach(el => {
         const initial = el.getAttribute('data-initial-seconds');
         const seconds = initial ? parseFloat(initial) : 0;
-        el.textContent = formatTime(seconds);
+        el.textContent = formatTimeColon(seconds); // Формат ЧЧ:ММ:СС
         el.setAttribute('data-seconds', seconds);
     });
     updateProjectTotals();
@@ -87,6 +95,30 @@ function editProjectName() {
             if (response.ok) location.reload();
         });
     }
+}
+
+function addProjectPayment() {
+    const amountStr = prompt('Введите сумму поступившей оплаты (₽):\n(Введенная сумма прибавится к уже оплаченной)');
+    if (!amountStr) return;
+
+    const amount = parseFloat(amountStr.replace(',', '.'));
+
+    if (isNaN(amount) || amount <= 0) {
+        alert('Пожалуйста, введите корректную сумму.');
+        return;
+    }
+
+    fetch(`/developers/api/projects/${currentProjectId}/update/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ add_payment: amount })
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Ошибка при сохранении оплаты');
+        }
+    }).catch(() => alert('Ошибка сети'));
 }
 
 function editProjectRate() {
@@ -172,7 +204,6 @@ async function toggleTaskCompletion(taskId, checked) {
         body: JSON.stringify({ is_completed: checked })
     });
 
-    // Обновляем визуальное состояние карточки задачи
     const card = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
     if (card) {
         if (checked) {
@@ -180,11 +211,9 @@ async function toggleTaskCompletion(taskId, checked) {
         } else {
             card.classList.remove('completed');
         }
-        // ВАЖНО: всегда приводим к строчному 'true'/'false'
         card.dataset.completed = checked.toString();
     }
 
-    // Пересчитываем и обновляем счётчик выполненных задач
     const allTaskCards = document.querySelectorAll('#tasksList .task-item');
     const completedCount = Array.from(allTaskCards).filter(
         item => item.dataset.completed === 'true'
@@ -197,12 +226,66 @@ async function toggleTaskCompletion(taskId, checked) {
 }
 
 // ---------------------------------------------------------------
+//  Редактирование Времени (с форматом ЧЧ:ММ:СС)
+// ---------------------------------------------------------------
+async function editTaskTime(taskId, element) {
+    const seconds = parseFloat(element.getAttribute('data-seconds') || element.getAttribute('data-initial-seconds') || 0);
+    const defaultTime = formatTimeColon(seconds);
+    const newTimeStr = prompt('Корректировка времени задачи\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
+
+    if (!newTimeStr || newTimeStr === defaultTime) return;
+    const parts = newTimeStr.split(':');
+    if (parts.length !== 3) {
+        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
+        return;
+    }
+
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    const totalSeconds = (h * 3600) + (m * 60) + s;
+
+    try {
+        const response = await fetch(`/developers/api/tasks/${taskId}/update/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ total_time: totalSeconds })
+        });
+        if (response.ok) { location.reload(); } else { alert('Ошибка при сохранении времени'); }
+    } catch (e) { alert('Ошибка сети при сохранении'); }
+}
+
+async function editDailySessionTime(element) {
+    const defaultTime = formatTimeColon(dailySeconds);
+    const newTimeStr = prompt('Корректировка времени за СЕГОДНЯ\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
+
+    if (!newTimeStr || newTimeStr === defaultTime) return;
+    const parts = newTimeStr.split(':');
+    if (parts.length !== 3) {
+        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
+        return;
+    }
+
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const s = parseInt(parts[2], 10) || 0;
+    const totalSeconds = (h * 3600) + (m * 60) + s;
+
+    try {
+        const response = await fetch(`/developers/api/daily-session/update/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ total_time: totalSeconds })
+        });
+        if (response.ok) {
+            if (typeof refreshLiveStatsNow === 'function') { refreshLiveStatsNow(); } else { location.reload(); }
+        } else { alert('Ошибка при сохранении дневного времени'); }
+    } catch (e) { alert('Ошибка сети при сохранении'); }
+}
+
+// ---------------------------------------------------------------
 //  Таймер (с динамическими кнопками старт/пауза)
 // ---------------------------------------------------------------
-
-/**
- * Форматирует секунды в виде "Xч Yм Zс".
- */
 function formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -210,7 +293,6 @@ function formatTime(seconds) {
     return `${hours}ч ${minutes}м ${secs}с`;
 }
 
-// Формат ЧЧ:ММ:СС (в отличие от formatTime, которая даёт "Xч Yм Zс")
 function formatTimeColon(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -218,9 +300,6 @@ function formatTimeColon(seconds) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-/**
- * Возвращает HTML-код кнопки старта/паузы в зависимости от состояния.
- */
 function renderTimerButton(isRunning) {
     if (isRunning) {
         return `<button onclick="pauseTimer(this.closest('[data-task-id]').dataset.taskId)" class="btn btn-warning timer-action">⏸ Пауза</button>`;
@@ -229,9 +308,6 @@ function renderTimerButton(isRunning) {
     }
 }
 
-/**
- * Обновляет кнопку таймера в карточке задачи.
- */
 function updateTimerButton(taskId, isRunning) {
     const container = document.querySelector(`.timer-btn-container[data-task-id="${taskId}"]`);
     if (container) {
@@ -239,9 +315,6 @@ function updateTimerButton(taskId, isRunning) {
     }
 }
 
-/**
- * Пересчитывает и обновляет общее время проекта и заработок.
- */
 function updateProjectTotals() {
     let totalSeconds = 0;
     document.querySelectorAll('.current-time').forEach(el => {
@@ -251,7 +324,7 @@ function updateProjectTotals() {
 
     const totalEl = document.getElementById('projectTotalTime');
     if (totalEl) {
-        totalEl.textContent = formatTime(totalSeconds);
+        totalEl.textContent = formatTimeColon(totalSeconds);
     }
 
     const rateEl = document.querySelector('.project-rate');
@@ -259,17 +332,33 @@ function updateProjectTotals() {
         const rateText = rateEl.textContent.trim();
         const rateMatch = rateText.match(/[\d.]+/);
         const rate = rateMatch ? parseFloat(rateMatch[0]) : 0;
-        const earned = (totalSeconds * rate / 3600).toFixed(2);
+
+        // Пересчет Заработанного
+        const earned = (totalSeconds * rate / 3600);
         const earnedEl = document.getElementById('earnedAmount');
         if (earnedEl) {
-            earnedEl.textContent = `${earned} ₽`;
+            earnedEl.textContent = `${earned.toFixed(2)} ₽`;
+        }
+
+        // Пересчет Осталось к оплате
+        const leftToPayEl = document.getElementById('remainingAmount');
+        if (leftToPayEl) {
+            const paidEl = document.getElementById('paidAmount');
+            const paidText = paidEl ? paidEl.textContent : '0';
+            const paid = parseFloat(paidText.replace(',', '.')) || 0;
+
+            const remaining = Math.max(0, earned - paid);
+            leftToPayEl.textContent = `${remaining.toFixed(2)} ₽`;
+
+            if (remaining <= 0 && earned > 0) {
+                leftToPayEl.style.color = '#10b981'; // Оплачено (зеленый)
+            } else {
+                leftToPayEl.style.color = '#ffd966'; // Долг (желтый)
+            }
         }
     }
 }
 
-/**
- * Живое обновление времени, кнопок и общего времени проекта.
- */
 function updateLiveTimers() {
     document.querySelectorAll('.timer-task-card[data-task-id]').forEach(card => {
         const taskId = card.dataset.taskId;
@@ -278,7 +367,7 @@ function updateLiveTimers() {
             .then(data => {
                 const timeEl = card.querySelector('.current-time');
                 if (timeEl) {
-                    timeEl.textContent = formatTime(data.total_time);
+                    timeEl.textContent = formatTimeColon(data.total_time);
                     timeEl.setAttribute('data-seconds', data.total_time);
                 }
                 if (data.is_timer_running) {
@@ -300,6 +389,7 @@ async function startTimer(taskId) {
             headers: { 'X-CSRFToken': csrfToken }
         });
         if (typeof updateLiveTimers === 'function') updateLiveTimers();
+        if (typeof refreshLiveStatsNow === 'function') refreshLiveStatsNow();
     } catch (e) {
         updateTimerButton(taskId, false);
     }
@@ -313,6 +403,7 @@ async function pauseTimer(taskId) {
             headers: { 'X-CSRFToken': csrfToken }
         });
         if (typeof updateLiveTimers === 'function') updateLiveTimers();
+        if (typeof refreshLiveStatsNow === 'function') refreshLiveStatsNow();
     } catch (e) {
         updateTimerButton(taskId, true);
     }
@@ -636,15 +727,51 @@ function filterProjectTasks(filter) {
 }
 
 function filterTasks(filter) {
-    document.querySelectorAll('#tasks-container .task-item').forEach(item => {
-        const completed = item.dataset.completed === 'True';
+    document.querySelectorAll('#tasksList .task-item, #tasks-container .task-item').forEach(item => {
+        // Учитываем, что Python может вернуть строку 'True' или 'true'
+        const completed = item.dataset.completed.toLowerCase() === 'true';
         item.style.display =
             filter === 'all' || (filter === 'active' && !completed) || (filter === 'completed' && completed)
                 ? ''
                 : 'none';
     });
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`filter-${filter}`).classList.add('active');
+
+    // Обновляем кнопки только для задач (не трогаем фильтры проектов)
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        if (b.id && b.id.startsWith('filter-') && !b.id.startsWith('filter-proj-')) {
+            b.classList.remove('active');
+        }
+    });
+    const activeBtn = document.getElementById(`filter-${filter}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    // Сохраняем выбор в память браузера
+    localStorage.setItem('savedTaskFilter', filter);
+}
+
+function filterProjects(filterType) {
+    const projects = document.querySelectorAll('.project-item');
+
+    projects.forEach(project => {
+        const status = project.getAttribute('data-payment-status');
+        let shouldShow = false;
+
+        if (filterType === 'all') {
+            shouldShow = true;
+        } else if (filterType === 'unpaid') {
+            shouldShow = (status === 'unpaid' || status === 'partial');
+        } else if (filterType === 'paid') {
+            shouldShow = (status === 'paid');
+        }
+
+        project.style.display = shouldShow ? 'flex' : 'none';
+    });
+
+    document.querySelectorAll('[id^="filter-proj-"]').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`filter-proj-${filterType}`);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    localStorage.setItem('savedProjectFilter', filterType);
 }
 
 function switchTab(tabName) {
@@ -654,19 +781,19 @@ function switchTab(tabName) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
 }
 
-/* ========== Живое обновление статистики ========== */
+// ---------------------------------------------------------------
+//  Живое обновление статистики и Pomodoro
+// ---------------------------------------------------------------
 let dailySeconds = 0;
 let isDailyTimerRunning = false;
 let dailyTimerInterval = null;
 let statsUpdateInterval = null;
 let earningsUpdateInterval = null;
 
-// Быстрое форматирование секунд для отладки (можно использовать formatTime из основного кода)
 function formatSecondsShort(sec) {
     return sec + ' сек';
 }
 
-// Перерисовка недельных баров
 function renderWeekBars(data) {
     const container = document.getElementById('weekBars');
     if (!container || !data.week_stats) return;
@@ -687,16 +814,14 @@ function renderWeekBars(data) {
     }).join('');
 }
 
-// Обновление всех показателей из данных API
 function applyDailyStats(data) {
     dailySeconds = data.current_daily_seconds;
     isDailyTimerRunning = data.is_daily_timer_running;
     document.getElementById('todayTime').textContent = formatTimeColon(dailySeconds);
     renderWeekBars(data);
-    document.getElementById('weekTotal').textContent =
-        `Всего за неделю: ${formatTimeColon(data.week_total)}`;
+    const weekTotalEl = document.getElementById('weekTotal');
+    if (weekTotalEl) weekTotalEl.textContent = `Всего за неделю: ${formatTimeColon(data.week_total)}`;
 
-    // Управление локальным секундомером
     if (isDailyTimerRunning && !dailyTimerInterval) {
         startLocalDailyTicker();
     } else if (!isDailyTimerRunning && dailyTimerInterval) {
@@ -704,7 +829,6 @@ function applyDailyStats(data) {
     }
 }
 
-// --- Функция вывода системных уведомлений из браузера ---
 function showRestNotification() {
     const title = "WorkBoard 🍅";
     const options = {
@@ -725,14 +849,12 @@ function showRestNotification() {
     }
 }
 
-// Запуск локального секундомера
 function startLocalDailyTicker() {
     if (dailyTimerInterval) return;
     dailyTimerInterval = setInterval(() => {
         dailySeconds++;
         document.getElementById('todayTime').textContent = formatTimeColon(dailySeconds);
 
-        // Логика Pomodoro (25 минут = 1500 секунд)
         let start = localStorage.getItem('pomodoroStart');
         if (!start) {
             start = Date.now();
@@ -743,7 +865,6 @@ function startLocalDailyTicker() {
         const elapsed = Math.floor((Date.now() - start) / 1000);
         const notified = localStorage.getItem('pomodoroNotified') === 'true';
 
-        // Если прошло 25 минут (1500 сек) и мы еще не уведомляли
         if (elapsed >= 25 * 60 && !notified) {
             showRestNotification();
             localStorage.setItem('pomodoroNotified', 'true');
@@ -751,17 +872,14 @@ function startLocalDailyTicker() {
     }, 1000);
 }
 
-// Остановка локального секундомера
 function stopLocalDailyTicker() {
     clearInterval(dailyTimerInterval);
     dailyTimerInterval = null;
 
-    // Сбрасываем таймер отдыха при любой паузе/остановке задач
     localStorage.removeItem('pomodoroStart');
     localStorage.removeItem('pomodoroNotified');
 }
 
-// Запрос данных дневной статистики
 async function fetchDailyStats() {
     try {
         const response = await fetch('/developers/api/daily-stats-widget/');
@@ -773,7 +891,6 @@ async function fetchDailyStats() {
     }
 }
 
-// Запрос данных заработка
 async function fetchEarnings() {
     try {
         const response = await fetch('/developers/api/earnings-widget/');
@@ -790,122 +907,14 @@ async function fetchEarnings() {
     }
 }
 
-// Инициализация (вызывается при загрузке страницы)
 function initLiveStats() {
-    // Первый запрос для заполнения виджетов реальными данными
     fetchDailyStats();
     fetchEarnings();
-
-    // Периодическое обновление (раз в 30 секунд)
     statsUpdateInterval = setInterval(fetchDailyStats, 30000);
     earningsUpdateInterval = setInterval(fetchEarnings, 30000);
 }
 
-// Принудительное обновление после ручного запуска/паузы таймера задачи
 function refreshLiveStatsNow() {
     fetchDailyStats();
     fetchEarnings();
 }
-
-// Добавляем вызовы обновления в существующие функции старта/паузы таймеров
-// (в файле developer.js уже есть startTimer и pauseTimer, дополним их)
-const originalStartTimer = window.startTimer;
-window.startTimer = async function (taskId) {
-    if (originalStartTimer) await originalStartTimer(taskId);
-    refreshLiveStatsNow();
-};
-
-const originalPauseTimer = window.pauseTimer;
-window.pauseTimer = async function (taskId) {
-    if (originalPauseTimer) await originalPauseTimer(taskId);
-    refreshLiveStatsNow();
-};
-
-// Редактирование времени задачи (по двойному клику)
-async function editTaskTime(taskId, element) {
-    // Берем сырые секунды из атрибута и форматируем в ЧЧ:ММ:СС
-    const seconds = parseFloat(element.getAttribute('data-seconds') || element.getAttribute('data-initial-seconds') || 0);
-    const defaultTime = formatTimeColon(seconds);
-
-    const newTimeStr = prompt('Корректировка времени задачи\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
-
-    // Если отменили или ничего не изменили
-    if (!newTimeStr || newTimeStr === defaultTime) return;
-
-    const parts = newTimeStr.split(':');
-    if (parts.length !== 3) {
-        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
-        return;
-    }
-
-    const h = parseInt(parts[0], 10) || 0;
-    const m = parseInt(parts[1], 10) || 0;
-    const s = parseInt(parts[2], 10) || 0;
-    const totalSeconds = (h * 3600) + (m * 60) + s;
-
-    try {
-        const response = await fetch(`/developers/api/tasks/${taskId}/update/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            body: JSON.stringify({ total_time: totalSeconds })
-        });
-
-        if (response.ok) {
-            location.reload();
-        } else {
-            alert('Ошибка при сохранении времени');
-        }
-    } catch (e) {
-        alert('Ошибка сети при сохранении');
-    }
-}
-
-// Редактирование дневной сессии (виджет "Сегодня")
-async function editDailySessionTime(element) {
-    // Берем глобальную переменную секунд и форматируем в ЧЧ:ММ:СС
-    const defaultTime = formatTimeColon(dailySeconds);
-    const newTimeStr = prompt('Корректировка времени за СЕГОДНЯ\nВведите новое время в формате ЧЧ:ММ:СС :', defaultTime);
-
-    if (!newTimeStr || newTimeStr === defaultTime) return;
-
-    const parts = newTimeStr.split(':');
-    if (parts.length !== 3) {
-        alert('Неверный формат! Пожалуйста, используйте формат ЧЧ:ММ:СС');
-        return;
-    }
-
-    const h = parseInt(parts[0], 10) || 0;
-    const m = parseInt(parts[1], 10) || 0;
-    const s = parseInt(parts[2], 10) || 0;
-    const totalSeconds = (h * 3600) + (m * 60) + s;
-
-    try {
-        const response = await fetch(`/developers/api/daily-session/update/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            body: JSON.stringify({ total_time: totalSeconds })
-        });
-
-        if (response.ok) {
-            if (typeof refreshLiveStatsNow === 'function') {
-                refreshLiveStatsNow();
-            } else {
-                location.reload();
-            }
-        } else {
-            alert('Ошибка при сохранении дневного времени');
-        }
-    } catch (e) {
-        alert('Ошибка сети при сохранении');
-    }
-}
-
-// Запуск инициализации после готовности DOM
-document.addEventListener('DOMContentLoaded', () => {
-    initLiveStats();
-
-    // Запрашиваем права на уведомления при первом запуске
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-    }
-});

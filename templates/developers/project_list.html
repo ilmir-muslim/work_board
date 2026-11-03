@@ -1,7 +1,10 @@
 {% extends 'tracker_base_with_columns.html' %}
 
 {% block main_content %}
-<h1>📁 Мои проекты</h1>
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+  <h1 style="margin-bottom: 0;">📁 Мои проекты</h1>
+  <h2 style="color: #10b981; margin-bottom: 0;">Всего к оплате: {{ total_remaining|floatformat:2 }} ₽</h2>
+</div>
 
 <!-- Создание проекта -->
 <div class="card">
@@ -12,12 +15,19 @@
   </div>
 </div>
 
+<!-- Фильтры проектов -->
+<div class="filters" style="margin-top: 1.5rem;">
+  <button onclick="filterProjects('all')" class="filter-btn active" id="filter-all">Все</button>
+  <button onclick="filterProjects('unpaid')" class="filter-btn" id="filter-unpaid">Ждут оплаты (и частично)</button>
+  <button onclick="filterProjects('paid')" class="filter-btn" id="filter-paid">Оплаченные</button>
+</div>
+
 <style>
   .projects-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1.2rem;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
   }
   .square-card {
     background: linear-gradient(145deg, #fcfaff, #f3f0ff);
@@ -67,12 +77,38 @@
     color: #64748b;
     margin-top: 0.3rem;
   }
+  
+  /* Стили для бейджей статуса */
+  .badge-status {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  .status-paid { background: #10b981; }
+  .status-partial { background: #f59e0b; }
+  .status-unpaid { background: #ef4444; }
 </style>
 
 <!-- Список проектов -->
-<div class="projects-grid">
+<div class="projects-grid" id="projectsContainer">
   {% for project in projects %}
-    <div class="square-card" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
+    <div class="square-card project-item" data-payment-status="{{ project.payment_status }}" onclick="location.href='{% url 'developers:project_detail' project.id %}'">
+      
+      <!-- БЕЙДЖ СТАТУСА -->
+      {% if project.payment_status == 'paid' and project.earned_amount > 0 %}
+        <span class="badge-status status-paid">Оплачен</span>
+      {% elif project.payment_status == 'partial' %}
+        <span class="badge-status status-partial">Частично</span>
+      {% else %}
+        <span class="badge-status status-unpaid">Не оплачен</span>
+      {% endif %}
+
       <h3>{{ project.name }}</h3>
       <div class="time-display">{{ project.formatted_total_time }}</div>
       <div class="project-date">{{ project.created_at|date:"d.m.Y" }}</div>
@@ -96,6 +132,31 @@ async function createProject() {
     body: JSON.stringify({ name: name })
   });
   if (res.ok) location.reload();
+}
+
+function filterProjects(filterType) {
+  const projects = document.querySelectorAll('.project-item');
+  
+  projects.forEach(project => {
+    const status = project.getAttribute('data-payment-status');
+    let shouldShow = false;
+    
+    if (filterType === 'all') {
+      shouldShow = true;
+    } else if (filterType === 'unpaid') {
+      shouldShow = (status === 'unpaid' || status === 'partial');
+    } else if (filterType === 'paid') {
+      shouldShow = (status === 'paid');
+    }
+    
+    project.style.display = shouldShow ? 'flex' : 'none';
+  });
+  
+  document.querySelectorAll('.filters .filter-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`filter-${filterType}`).classList.add('active');
+
+  // СОХРАНЯЕМ В ПАМЯТЬ БРАУЗЕРА
+  localStorage.setItem('savedProjectFilter', filterType);
 }
 </script>
 {% endblock %}
