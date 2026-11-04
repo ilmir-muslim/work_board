@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from developers.models import Project, Task
 from users.models import User
-from .models import AssignedTask, ProjectAssignment, Notification, AssignmentAttachment
+from .models import AssignedTask, Notification, AssignmentAttachment
 from .forms import AssignedTaskForm, ProjectAssignmentForm
 
 

@@ -1,6 +1,5 @@
 """
 Django settings for work_board project.
-...
 """
 
 import os

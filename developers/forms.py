@@ -1,5 +1,5 @@
 from django import forms
-from .models import Project, Task, SubTask, TaskComment, SubTaskComment
+from .models import Project, Task, SubTask, TaskComment
 
 
 class ProjectForm(forms.ModelForm):

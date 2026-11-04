@@ -1,13 +1,18 @@
 #!/bin/bash
-PROJECT_DIR="/home/ilmir/dev_code/pet_project/work_board_dev/work_board"
-cd "$PROJECT_DIR" || exit 1
 
-if docker compose ps --services --filter "status=running" | grep -q "^web$"; then
-    kdialog --passivepopup "🛑 Остановка сервера..." 3
+# Абсолютный путь к проекту
+PROJECT_DIR="/home/ilmir_pc/dev_code/pet_project/work_board_dev/work_board"
+cd "$PROJECT_DIR" || exit
+
+# Проверяем, запущен ли контейнер web
+if docker compose ps --status running | grep -q "web"; then
+    # Если работает — останавливаем
+    notify-send "WorkBoard" "🛑 Остановка сервера..." --icon=dialog-information
     docker compose stop
-    kdialog --passivepopup "✅ Сервер остановлен!" 5
+    notify-send "WorkBoard" "✅ Сервер остановлен!" --icon=dialog-information
 else
-    kdialog --passivepopup "🚀 Запуск сервера..." 3
-    docker compose up -d --build
-    kdialog --passivepopup "✅ Готово! Можно обновлять страницу." 5
+    # Если не работает — запускаем
+    notify-send "WorkBoard" "🚀 Запуск сервера..." --icon=dialog-information
+    docker compose up -d
+    notify-send "WorkBoard" "✅ Готово! Можно обновлять страницу в браузере." --icon=dialog-information
 fi
